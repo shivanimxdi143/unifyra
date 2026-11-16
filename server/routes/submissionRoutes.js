@@ -4,7 +4,8 @@ const {
   createSubmission,
   getSubmissions,
   getSubmissionById,
-  getSubmissionsByUser
+  getSubmissionsByUser,
+  resubmitContent
 } = require('../controllers/submissionController');
 
 // POST /api/submissions, GET /api/submissions
@@ -18,9 +19,15 @@ router
   .route('/user/:userId')
   .get(getSubmissionsByUser);
 
-// GET /api/submissions/:id
+// GET /api/submissions/:id, PUT /api/submissions/:id (resubmission)
 router
   .route('/:id')
-  .get(getSubmissionById);
+  .get(getSubmissionById)
+  .put(resubmitContent);
+
+// Alias: PUT /api/submissions/:id/resubmit
+router
+  .route('/:id/resubmit')
+  .put(resubmitContent);
 
 module.exports = router;

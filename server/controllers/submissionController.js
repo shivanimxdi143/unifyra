@@ -161,9 +161,73 @@ const getSubmissionsByUser = async (req, res, next) => {
   }
 };
 
+/**
+ * @route   PUT /api/submissions/:id
+ * @desc    Update submission content / resubmit for brand checking (resets status to pending, clears old findings)
+ * @access  Public
+ */
+const resubmitContent = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { content, contentType } = req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        error: { message: `Invalid submission ID format: '${id}'` }
+      });
+    }
+
+    if (!content || !content.trim()) {
+      return res.status(400).json({
+        success: false,
+        error: { message: 'Updated content is required' }
+      });
+    }
+
+    const submission = await Submission.findById(id);
+    if (!submission) {
+      return res.status(404).json({
+        success: false,
+        error: { message: `Submission not found with ID: '${id}'` }
+      });
+    }
+
+    // Update content and reset status to pending
+    submission.content = content.trim();
+    if (contentType) {
+      submission.contentType = contentType.trim().toLowerCase();
+    }
+    submission.status = 'pending';
+    await submission.save();
+
+    // Clear old findings to prevent duplicates upon re-analysis (review history in Review collection is retained)
+    await Finding.deleteMany({ submissionId: submission._id });
+
+    res.status(200).json({
+      success: true,
+      message: 'Submission updated and reset to pending for re-analysis',
+      data: submission
+    });
+  } catch (error) {
+    if (error.name === 'ValidationError') {
+      const messages = Object.values(error.errors).map(err => err.message);
+      return res.status(400).json({
+        success: false,
+        error: {
+          message: 'Validation Error',
+          details: messages
+        }
+      });
+    }
+    next(error);
+  }
+};
+
 module.exports = {
   createSubmission,
   getSubmissions,
   getSubmissionById,
-  getSubmissionsByUser
+  getSubmissionsByUser,
+  resubmitContent
 };
