@@ -6,14 +6,19 @@ import {
   Filter,
   CheckCircle2,
   XCircle,
-  BookOpen
+  BookOpen,
+  Edit2
 } from 'lucide-react';
 import PageHeader from '../components/common/PageHeader';
 import StatusBadge from '../components/common/StatusBadge';
 import Modal from '../components/common/Modal';
 import EmptyState from '../components/common/EmptyState';
 import { BRAND_PROFILE } from '../services/mockData';
-import { getStoredGuidelines, saveGuidelines } from '../services/contentService';
+import {
+  getStoredGuidelines,
+  saveGuidelines,
+  updateGuideline
+} from '../services/contentService';
 import { useOutletContext } from 'react-router-dom';
 
 export default function BrandGuidelines() {
@@ -22,10 +27,13 @@ export default function BrandGuidelines() {
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [selectedSeverity, setSelectedSeverity] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
-  // Form state for adding guideline
-  const [newRule, setNewRule] = useState({
+  // Modals for Add & Edit
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [editingGuideline, setEditingGuideline] = useState(null);
+
+  // Form state
+  const [formData, setFormData] = useState({
     title: '',
     category: 'Tone & Voice',
     severity: 'high',
@@ -55,29 +63,12 @@ export default function BrandGuidelines() {
       g.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       g.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
       g.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      g.doExample.toLowerCase().includes(searchQuery.toLowerCase());
+      (g.doExample && g.doExample.toLowerCase().includes(searchQuery.toLowerCase()));
     return matchesCat && matchesSev && matchesQuery;
   });
 
-  const handleAddGuideline = (e) => {
-    e.preventDefault();
-    if (!newRule.title || !newRule.description) {
-      alert('Please fill in both Rule Title and Description.');
-      return;
-    }
-
-    const nextId = `BG-${Math.floor(100 + Math.random() * 900)}`;
-    const created = {
-      id: nextId,
-      ...newRule,
-      updatedAt: new Date().toISOString().split('T')[0]
-    };
-
-    const updated = [created, ...guidelines];
-    setGuidelines(updated);
-    saveGuidelines(updated);
-    setIsAddModalOpen(false);
-    setNewRule({
+  const handleOpenAdd = () => {
+    setFormData({
       title: '',
       category: 'Tone & Voice',
       severity: 'high',
@@ -86,23 +77,71 @@ export default function BrandGuidelines() {
       doExample: '',
       dontExample: ''
     });
-    showToast(`Guideline ${nextId} published and loaded into AI audit engine.`);
+    setIsAddModalOpen(true);
+  };
+
+  const handleOpenEdit = (guideline) => {
+    setEditingGuideline(guideline);
+    setFormData({
+      title: guideline.title || '',
+      category: guideline.category || 'Tone & Voice',
+      severity: guideline.severity || 'high',
+      enforcement: guideline.enforcement || 'Strict',
+      description: guideline.description || '',
+      doExample: guideline.doExample || '',
+      dontExample: guideline.dontExample || ''
+    });
+  };
+
+  const handleSaveAdd = (e) => {
+    e.preventDefault();
+    if (!formData.title || !formData.description) {
+      alert('Please fill in both Rule Title and Description.');
+      return;
+    }
+
+    const nextId = `BG-${Math.floor(100 + Math.random() * 900)}`;
+    const created = {
+      id: nextId,
+      ...formData,
+      updatedAt: new Date().toISOString().split('T')[0]
+    };
+
+    const updated = [created, ...guidelines];
+    setGuidelines(updated);
+    saveGuidelines(updated);
+    setIsAddModalOpen(false);
+    showToast(`Guideline ${nextId} created and active in AI audits.`);
+  };
+
+  const handleSaveEdit = (e) => {
+    e.preventDefault();
+    if (!editingGuideline) return;
+    if (!formData.title || !formData.description) {
+      alert('Please fill in both Rule Title and Description.');
+      return;
+    }
+
+    updateGuideline(editingGuideline.id, formData);
+    loadData();
+    setEditingGuideline(null);
+    showToast(`Guideline ${editingGuideline.id} successfully updated.`);
   };
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Brand Guidelines & Rules"
-        subtitle={`Active corporate rules and editorial constraints enforced automatically across all ${BRAND_PROFILE.name} communications.`}
+        subtitle={`Active corporate rules, tone standards, and regulatory constraints enforced automatically across all ${BRAND_PROFILE.name} communications.`}
         badge={
-          <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200">
+          <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">
             {guidelines.length} Rules Active
           </span>
         }
         actions={
           <button
-            onClick={() => setIsAddModalOpen(true)}
-            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-semibold text-xs transition-all shadow-sm shadow-emerald-950/20 cursor-pointer"
+            onClick={handleOpenAdd}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs transition-all shadow-sm shadow-indigo-950/20 cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             <span>Create New Guideline</span>
@@ -121,7 +160,7 @@ export default function BrandGuidelines() {
               placeholder="Search by rule title, ID (e.g. BG-201), keywords..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 focus:border-emerald-500 focus:bg-white text-xs rounded-xl pl-9 pr-4 py-2.5 text-slate-900 placeholder:text-slate-400 outline-none transition-all"
+              className="w-full bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white text-xs rounded-xl pl-9 pr-4 py-2.5 text-slate-900 placeholder:text-slate-400 outline-none transition-all"
             />
           </div>
 
@@ -131,7 +170,7 @@ export default function BrandGuidelines() {
             <select
               value={selectedSeverity}
               onChange={(e) => setSelectedSeverity(e.target.value)}
-              className="bg-slate-50 border border-slate-200 text-xs font-medium text-slate-700 rounded-xl px-3 py-2 outline-none focus:border-emerald-500 cursor-pointer"
+              className="bg-slate-50 border border-slate-200 text-xs font-medium text-slate-700 rounded-xl px-3 py-2 outline-none focus:border-indigo-500 cursor-pointer"
             >
               {severities.map((sev) => (
                 <option key={sev} value={sev}>
@@ -142,7 +181,7 @@ export default function BrandGuidelines() {
           </div>
         </div>
 
-        {/* Category Pills */}
+        {/* Category Pills with subtle purple/blue active state */}
         <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs">
           <span className="text-slate-400 font-medium shrink-0 mr-1">Categories:</span>
           {categories.map((cat) => (
@@ -151,7 +190,7 @@ export default function BrandGuidelines() {
               onClick={() => setSelectedCategory(cat)}
               className={`px-3 py-1.5 rounded-full font-medium transition-all shrink-0 cursor-pointer ${
                 selectedCategory === cat
-                  ? 'bg-emerald-700 text-white shadow-2xs'
+                  ? 'bg-indigo-600 text-white shadow-2xs font-semibold'
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200 hover:text-slate-900'
               }`}
             >
@@ -185,7 +224,7 @@ export default function BrandGuidelines() {
           {filteredGuidelines.map((g) => (
             <div
               key={g.id}
-              className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs hover:shadow-md hover:border-slate-300 transition-all flex flex-col justify-between overflow-hidden"
+              className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs hover:shadow-md hover:border-slate-300 transition-all flex flex-col justify-between overflow-hidden group"
             >
               {/* Header */}
               <div className="p-5 pb-4 border-b border-slate-100">
@@ -194,11 +233,21 @@ export default function BrandGuidelines() {
                     <span className="font-mono text-xs font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200">
                       {g.id}
                     </span>
-                    <span className="text-xs font-semibold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100">
+                    <span className="text-xs font-semibold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-md border border-indigo-100">
                       {g.category}
                     </span>
                   </div>
-                  <StatusBadge status={g.severity} size="sm" />
+                  <div className="flex items-center gap-2">
+                    <StatusBadge status={g.severity} size="sm" />
+                    <button
+                      onClick={() => handleOpenEdit(g)}
+                      className="p-1 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors cursor-pointer"
+                      title="Edit this Guideline"
+                      aria-label="Edit guideline"
+                    >
+                      <Edit2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
 
                 <h3 className="text-base font-bold text-slate-900 tracking-tight leading-snug">
@@ -218,7 +267,7 @@ export default function BrandGuidelines() {
                       <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                       <span>DO (Approved standard):</span>
                     </div>
-                    <p className="text-emerald-950/90 font-medium italic pl-5">
+                    <p className="text-emerald-950 font-medium italic pl-5">
                       "{g.doExample}"
                     </p>
                   </div>
@@ -231,7 +280,7 @@ export default function BrandGuidelines() {
                       <XCircle className="w-3.5 h-3.5 text-rose-600 shrink-0" />
                       <span>DON'T (Offending copy):</span>
                     </div>
-                    <p className="text-rose-950/90 font-medium italic pl-5">
+                    <p className="text-rose-950 font-medium italic pl-5">
                       "{g.dontExample}"
                     </p>
                   </div>
@@ -241,10 +290,18 @@ export default function BrandGuidelines() {
               {/* Footer */}
               <div className="px-5 py-3 border-t border-slate-100 bg-white flex items-center justify-between text-[11px] text-slate-400">
                 <span className="flex items-center gap-1">
-                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                  <ShieldCheck className="w-3.5 h-3.5 text-indigo-600" />
                   Enforcement: <strong className="text-slate-700">{g.enforcement || 'Strict'}</strong>
                 </span>
-                <span>Updated: {g.updatedAt}</span>
+                <div className="flex items-center gap-3">
+                  <span>Updated: {g.updatedAt}</span>
+                  <button
+                    onClick={() => handleOpenEdit(g)}
+                    className="text-indigo-600 hover:text-indigo-800 font-semibold cursor-pointer"
+                  >
+                    Edit
+                  </button>
+                </div>
               </div>
             </div>
           ))}
@@ -255,8 +312,8 @@ export default function BrandGuidelines() {
       <Modal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
-        title="Add New Brand Guideline"
-        subtitle="Enforce a new editorial or regulatory requirement across FreshBite AI audits."
+        title="Create New Brand Guideline"
+        subtitle="Enforce a new editorial, legal, or voice constraint across FreshBite AI audits."
         footer={
           <>
             <button
@@ -266,15 +323,15 @@ export default function BrandGuidelines() {
               Cancel
             </button>
             <button
-              onClick={handleAddGuideline}
-              className="px-4 py-2 rounded-xl text-xs font-semibold bg-emerald-700 hover:bg-emerald-800 text-white cursor-pointer shadow-sm"
+              onClick={handleSaveAdd}
+              className="px-4 py-2 rounded-xl text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer shadow-sm"
             >
-              Save & Enforce Guideline
+              Save & Enforce Rule
             </button>
           </>
         }
       >
-        <form onSubmit={handleAddGuideline} className="space-y-4">
+        <form onSubmit={handleSaveAdd} className="space-y-4">
           <div>
             <label className="block text-xs font-bold text-slate-800 mb-1">
               Rule Title *
@@ -282,10 +339,10 @@ export default function BrandGuidelines() {
             <input
               type="text"
               required
-              placeholder="e.g., Mandatory Sodium Disclosures on High-Sodium Bowls"
-              value={newRule.title}
-              onChange={(e) => setNewRule({ ...newRule, title: e.target.value })}
-              className="w-full text-xs p-2.5 rounded-xl border border-slate-200 focus:border-emerald-500 outline-none"
+              placeholder="e.g. Mandatory Allergen Cross-Contact Disclosure"
+              value={formData.title}
+              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+              className="w-full text-xs p-2.5 rounded-xl border border-slate-200 focus:border-indigo-500 outline-none"
             />
           </div>
 
@@ -293,9 +350,9 @@ export default function BrandGuidelines() {
             <div>
               <label className="block text-xs font-bold text-slate-800 mb-1">Category</label>
               <select
-                value={newRule.category}
-                onChange={(e) => setNewRule({ ...newRule, category: e.target.value })}
-                className="w-full text-xs p-2.5 rounded-xl border border-slate-200 focus:border-emerald-500 outline-none"
+                value={formData.category}
+                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                className="w-full text-xs p-2.5 rounded-xl border border-slate-200 focus:border-indigo-500 outline-none"
               >
                 <option value="Tone & Voice">Tone & Voice</option>
                 <option value="Health & Claims">Health & Claims</option>
@@ -307,9 +364,9 @@ export default function BrandGuidelines() {
             <div>
               <label className="block text-xs font-bold text-slate-800 mb-1">Severity</label>
               <select
-                value={newRule.severity}
-                onChange={(e) => setNewRule({ ...newRule, severity: e.target.value })}
-                className="w-full text-xs p-2.5 rounded-xl border border-slate-200 focus:border-emerald-500 outline-none"
+                value={formData.severity}
+                onChange={(e) => setFormData({ ...formData, severity: e.target.value })}
+                className="w-full text-xs p-2.5 rounded-xl border border-slate-200 focus:border-indigo-500 outline-none"
               >
                 <option value="critical">Critical</option>
                 <option value="high">High</option>
@@ -321,9 +378,9 @@ export default function BrandGuidelines() {
             <div>
               <label className="block text-xs font-bold text-slate-800 mb-1">Enforcement</label>
               <select
-                value={newRule.enforcement}
-                onChange={(e) => setNewRule({ ...newRule, enforcement: e.target.value })}
-                className="w-full text-xs p-2.5 rounded-xl border border-slate-200 focus:border-emerald-500 outline-none"
+                value={formData.enforcement}
+                onChange={(e) => setFormData({ ...formData, enforcement: e.target.value })}
+                className="w-full text-xs p-2.5 rounded-xl border border-slate-200 focus:border-indigo-500 outline-none"
               >
                 <option value="Mandatory">Mandatory</option>
                 <option value="Strict">Strict</option>
@@ -334,15 +391,15 @@ export default function BrandGuidelines() {
 
           <div>
             <label className="block text-xs font-bold text-slate-800 mb-1">
-              Description & Rationale *
+              Description & Rational Guidance *
             </label>
             <textarea
               required
               rows={3}
               placeholder="Explain why this rule exists and how content creators should comply..."
-              value={newRule.description}
-              onChange={(e) => setNewRule({ ...newRule, description: e.target.value })}
-              className="w-full text-xs p-2.5 rounded-xl border border-slate-200 focus:border-emerald-500 outline-none"
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              className="w-full text-xs p-2.5 rounded-xl border border-slate-200 focus:border-indigo-500 outline-none"
             />
           </div>
 
@@ -354,8 +411,8 @@ export default function BrandGuidelines() {
               <textarea
                 rows={2}
                 placeholder="Example of compliant copy..."
-                value={newRule.doExample}
-                onChange={(e) => setNewRule({ ...newRule, doExample: e.target.value })}
+                value={formData.doExample}
+                onChange={(e) => setFormData({ ...formData, doExample: e.target.value })}
                 className="w-full text-xs p-2.5 rounded-xl border border-emerald-200 bg-emerald-50/30 focus:border-emerald-500 outline-none"
               />
             </div>
@@ -366,14 +423,136 @@ export default function BrandGuidelines() {
               <textarea
                 rows={2}
                 placeholder="Example of non-compliant copy..."
-                value={newRule.dontExample}
-                onChange={(e) => setNewRule({ ...newRule, dontExample: e.target.value })}
+                value={formData.dontExample}
+                onChange={(e) => setFormData({ ...formData, dontExample: e.target.value })}
                 className="w-full text-xs p-2.5 rounded-xl border border-rose-200 bg-rose-50/30 focus:border-rose-500 outline-none"
               />
             </div>
           </div>
         </form>
       </Modal>
+
+      {/* Edit Guideline Modal */}
+      {editingGuideline && (
+        <Modal
+          isOpen={!!editingGuideline}
+          onClose={() => setEditingGuideline(null)}
+          title={`Edit Guideline: ${editingGuideline.id}`}
+          subtitle={`Modify rule definition, severity level, or compliance examples for ${editingGuideline.id}.`}
+          footer={
+            <>
+              <button
+                onClick={() => setEditingGuideline(null)}
+                className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveEdit}
+                className="px-4 py-2 rounded-xl text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer shadow-sm"
+              >
+                Save Changes
+              </button>
+            </>
+          }
+        >
+          <form onSubmit={handleSaveEdit} className="space-y-4">
+            <div>
+              <label className="block text-xs font-bold text-slate-800 mb-1">
+                Rule Title *
+              </label>
+              <input
+                type="text"
+                required
+                value={formData.title}
+                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                className="w-full text-xs p-2.5 rounded-xl border border-slate-200 focus:border-indigo-500 outline-none"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div>
+                <label className="block text-xs font-bold text-slate-800 mb-1">Category</label>
+                <select
+                  value={formData.category}
+                  onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                  className="w-full text-xs p-2.5 rounded-xl border border-slate-200 focus:border-indigo-500 outline-none"
+                >
+                  <option value="Tone & Voice">Tone & Voice</option>
+                  <option value="Health & Claims">Health & Claims</option>
+                  <option value="Trademarks & Naming">Trademarks & Naming</option>
+                  <option value="Promotional Style">Promotional Style</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-800 mb-1">Severity</label>
+                <select
+                  value={formData.severity}
+                  onChange={(e) => setFormData({ ...formData, severity: e.target.value })}
+                  className="w-full text-xs p-2.5 rounded-xl border border-slate-200 focus:border-indigo-500 outline-none"
+                >
+                  <option value="critical">Critical</option>
+                  <option value="high">High</option>
+                  <option value="medium">Medium</option>
+                  <option value="low">Low</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-800 mb-1">Enforcement</label>
+                <select
+                  value={formData.enforcement}
+                  onChange={(e) => setFormData({ ...formData, enforcement: e.target.value })}
+                  className="w-full text-xs p-2.5 rounded-xl border border-slate-200 focus:border-indigo-500 outline-none"
+                >
+                  <option value="Mandatory">Mandatory</option>
+                  <option value="Strict">Strict</option>
+                  <option value="Recommended">Recommended</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-slate-800 mb-1">
+                Description & Rational Guidance *
+              </label>
+              <textarea
+                required
+                rows={3}
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                className="w-full text-xs p-2.5 rounded-xl border border-slate-200 focus:border-indigo-500 outline-none"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-bold text-emerald-800 mb-1">
+                  Approved Example (DO)
+                </label>
+                <textarea
+                  rows={2}
+                  value={formData.doExample}
+                  onChange={(e) => setFormData({ ...formData, doExample: e.target.value })}
+                  className="w-full text-xs p-2.5 rounded-xl border border-emerald-200 bg-emerald-50/30 focus:border-emerald-500 outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold text-rose-800 mb-1">
+                  Disallowed Example (DON'T)
+                </label>
+                <textarea
+                  rows={2}
+                  value={formData.dontExample}
+                  onChange={(e) => setFormData({ ...formData, dontExample: e.target.value })}
+                  className="w-full text-xs p-2.5 rounded-xl border border-rose-200 bg-rose-50/30 focus:border-rose-500 outline-none"
+                />
+              </div>
+            </div>
+          </form>
+        </Modal>
+      )}
     </div>
   );
 }

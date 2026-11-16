@@ -79,21 +79,21 @@ export default function ReviewQueue() {
         }
       />
 
-      {/* Reviewer Note Banner */}
-      <div className="bg-slate-900 text-white rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border border-slate-800 shadow-md">
+      {/* Reviewer Note Banner (Deep navy with subtle indigo/blue accents) */}
+      <div className="bg-[#0b1329] text-white rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border border-indigo-950/80 shadow-md">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center shrink-0">
+          <div className="w-10 h-10 rounded-xl bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 flex items-center justify-center shrink-0">
             <UserCheck className="w-5 h-5" />
           </div>
           <div>
             <h4 className="text-sm font-bold text-white flex items-center gap-2">
               Human-in-the-Loop Governance Guardrail
-              <span className="text-[10px] bg-emerald-600 text-white font-mono px-1.5 py-0.2 rounded font-bold">
+              <span className="text-[10px] bg-indigo-600 text-white font-mono px-1.5 py-0.2 rounded font-bold">
                 Zero Auto-Approval
               </span>
             </h4>
             <p className="text-xs text-slate-300 mt-0.5">
-              Current reviewer identity: <strong>{currentRole}</strong>. Verify AI findings before issuing green approvals.
+              Reviewer session: <strong>{currentRole}</strong>. Verify AI findings, evaluate offending phrases, and apply editorial decisions.
             </p>
           </div>
         </div>
@@ -121,7 +121,7 @@ export default function ReviewQueue() {
               <span>{tab.label}</span>
               <span
                 className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
-                  filterStatus === tab.id ? 'bg-slate-700 text-white' : 'bg-slate-200 text-slate-700'
+                  filterStatus === tab.id ? 'bg-indigo-700 text-white' : 'bg-slate-200 text-slate-700'
                 }`}
               >
                 {tab.count}
@@ -138,7 +138,7 @@ export default function ReviewQueue() {
             placeholder="Search queue by title, submitter, ID..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-slate-50 border border-slate-200 focus:border-emerald-500 focus:bg-white text-xs rounded-xl pl-9 pr-4 py-2 text-slate-900 outline-none transition-all"
+            className="w-full bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white text-xs rounded-xl pl-9 pr-4 py-2 text-slate-900 outline-none transition-all"
           />
         </div>
       </div>
@@ -162,7 +162,7 @@ export default function ReviewQueue() {
                   onClick={() => handleOpenReview(sub)}
                   className={`bg-white rounded-2xl border p-4.5 transition-all cursor-pointer shadow-2xs hover:border-slate-300 ${
                     isSelected
-                      ? 'border-emerald-600 ring-2 ring-emerald-500/20 shadow-md bg-emerald-50/10'
+                      ? 'border-indigo-600 ring-2 ring-indigo-500/20 shadow-md bg-indigo-50/15'
                       : 'border-slate-200/90'
                   }`}
                 >
@@ -268,7 +268,7 @@ export default function ReviewQueue() {
                           </div>
                           <p className="text-slate-600">{f.explanation}</p>
                           {f.suggestion && (
-                            <div className="p-2 rounded bg-emerald-50 text-emerald-900 border border-emerald-200 text-[11px]">
+                            <div className="p-2 rounded bg-indigo-50 text-indigo-900 border border-indigo-200 text-[11px]">
                               <strong>Suggested Fix:</strong> {f.suggestion}
                             </div>
                           )}
@@ -288,7 +288,7 @@ export default function ReviewQueue() {
                     placeholder="Provide constructive feedback for the content author or record reasons for approval/rejection..."
                     value={reviewerNotes}
                     onChange={(e) => setReviewerNotes(e.target.value)}
-                    className="w-full text-xs p-3 rounded-xl border border-slate-200 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none"
+                    className="w-full text-xs p-3 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none"
                   />
                 </div>
 
@@ -314,13 +314,13 @@ export default function ReviewQueue() {
                       className="px-3.5 py-2 rounded-xl border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-900 font-semibold text-xs transition-colors flex items-center gap-1.5 cursor-pointer"
                     >
                       <AlertTriangle className="w-3.5 h-3.5" />
-                      <span>Request Revisions</span>
+                      <span>Request Changes</span>
                     </button>
 
                     <button
                       type="button"
                       onClick={() => handleDecision('approved')}
-                      className="px-4 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-semibold text-xs transition-colors shadow-sm shadow-emerald-950/20 flex items-center gap-1.5 cursor-pointer"
+                      className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs transition-colors shadow-sm shadow-emerald-950/20 flex items-center gap-1.5 cursor-pointer"
                     >
                       <CheckCircle2 className="w-4 h-4" />
                       <span>Approve Content</span>

@@ -46,6 +46,22 @@ export function saveGuidelines(guidelines) {
   }
 }
 
+export function updateGuideline(id, updatedData) {
+  const guidelines = getStoredGuidelines();
+  const index = guidelines.findIndex((g) => g.id === id);
+  if (index === -1) return null;
+
+  const updated = {
+    ...guidelines[index],
+    ...updatedData,
+    updatedAt: new Date().toISOString().split('T')[0]
+  };
+
+  guidelines[index] = updated;
+  saveGuidelines(guidelines);
+  return updated;
+}
+
 /**
  * Intelligent client-side rule evaluation simulating the Gemini AI Brand Governance model.
  */

@@ -68,14 +68,14 @@ export default function TopNav({
           <Menu className="w-5 h-5" />
         </button>
 
-        {/* Brand Selector Badge */}
-        <div className="hidden sm:flex items-center gap-2 pl-1 pr-3 py-1.5 rounded-full bg-emerald-50/80 border border-emerald-200 text-xs text-emerald-950">
+        {/* Brand Selector Badge with subtle purple/blue and fresh accents */}
+        <div className="hidden sm:flex items-center gap-2 pl-1.5 pr-3 py-1 rounded-full bg-slate-50 border border-slate-200/90 text-xs text-slate-800 shadow-2xs">
           <div className="w-5 h-5 rounded-full bg-emerald-600 flex items-center justify-center text-white text-[10px]">
             <Leaf className="w-3 h-3" />
           </div>
-          <span className="font-semibold text-emerald-900">{BRAND_PROFILE.name}</span>
-          <span className="text-emerald-700 font-mono text-[11px]">• 48 Outlets</span>
-          <span className="inline-block px-1.5 py-0.2 rounded text-[10px] bg-emerald-200/60 font-semibold text-emerald-800">
+          <span className="font-semibold text-slate-900">{BRAND_PROFILE.name}</span>
+          <span className="text-slate-400 font-mono text-[11px]">• 48 Outlets</span>
+          <span className="inline-block px-1.5 py-0.2 rounded text-[10px] bg-indigo-50 font-semibold text-indigo-700 border border-indigo-200/60">
             Active Workspace
           </span>
         </div>
@@ -90,7 +90,7 @@ export default function TopNav({
             placeholder="Search guidelines, campaigns, or rules (e.g. BG-201, claims)..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-slate-50 border border-slate-200 focus:border-emerald-500 focus:bg-white focus:ring-2 focus:ring-emerald-500/20 text-xs rounded-xl pl-9 pr-4 py-2 text-slate-900 placeholder:text-slate-400 transition-all outline-none"
+            className="w-full bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 text-xs rounded-xl pl-9 pr-4 py-2 text-slate-900 placeholder:text-slate-400 transition-all outline-none"
           />
         </div>
       </div>
@@ -116,9 +116,9 @@ export default function TopNav({
             }}
             className="flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded-lg bg-slate-100 text-slate-800 hover:bg-slate-200/80 transition-colors border border-slate-200 cursor-pointer"
           >
-            <UserCheck className="w-3.5 h-3.5 text-emerald-600" />
-            <span className="hidden sm:inline">Role:</span>
-            <span className="text-emerald-700">{currentRole}</span>
+            <UserCheck className="w-3.5 h-3.5 text-indigo-600" />
+            <span className="hidden sm:inline text-slate-500 font-normal">Role:</span>
+            <span className="text-indigo-700 font-semibold">{currentRole}</span>
             <ChevronDown className="w-3 h-3 text-slate-500" />
           </button>
 
@@ -136,10 +136,10 @@ export default function TopNav({
                     setShowRoleMenu(false);
                   }}
                   className={`w-full text-left px-3 py-2 text-xs hover:bg-slate-50 transition-colors flex flex-col cursor-pointer ${
-                    currentRole === r.label ? 'bg-emerald-50/60 font-semibold' : ''
+                    currentRole === r.label ? 'bg-indigo-50/70 font-semibold' : ''
                   }`}
                 >
-                  <span className={currentRole === r.label ? 'text-emerald-800' : 'text-slate-800'}>
+                  <span className={currentRole === r.label ? 'text-indigo-800' : 'text-slate-800'}>
                     {r.label}
                   </span>
                   <span className="text-[10px] text-slate-500 font-normal">{r.desc}</span>
@@ -160,14 +160,14 @@ export default function TopNav({
             aria-label="View notifications"
           >
             <Bell className="w-5 h-5" />
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-white" />
+            <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-indigo-600 ring-2 ring-white" />
           </button>
 
           {showNotifications && (
             <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-xl shadow-xl border border-slate-200 py-2 z-50 animate-scale-up">
               <div className="px-4 py-2 border-b border-slate-100 flex items-center justify-between">
                 <span className="text-xs font-bold text-slate-900">Governance Alerts</span>
-                <span className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                <span className="text-[11px] font-semibold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-200">
                   2 unread
                 </span>
               </div>
@@ -177,7 +177,7 @@ export default function TopNav({
                     <div className="flex items-start gap-2.5">
                       <div className="mt-0.5 shrink-0">
                         {n.type === 'warning' && <AlertTriangle className="w-4 h-4 text-amber-500" />}
-                        {n.type === 'info' && <Sparkles className="w-4 h-4 text-blue-500" />}
+                        {n.type === 'info' && <Sparkles className="w-4 h-4 text-indigo-500" />}
                         {n.type === 'success' && <CheckCircle2 className="w-4 h-4 text-emerald-500" />}
                       </div>
                       <div className="flex-1 min-w-0">
@@ -193,9 +193,9 @@ export default function TopNav({
           )}
         </div>
 
-        {/* Profile Avatar */}
+        {/* Profile Avatar with subtle purple/blue gradient */}
         <div className="flex items-center gap-2 pl-2 border-l border-slate-200">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-emerald-600 to-teal-500 flex items-center justify-center text-white font-bold text-xs ring-2 ring-slate-100 shadow-2xs">
+          <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-600 via-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-xs ring-2 ring-slate-100 shadow-2xs">
             SH
           </div>
           <div className="hidden lg:block text-left">

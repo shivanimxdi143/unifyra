@@ -20,7 +20,7 @@ export default function SubmitContent() {
   const navigate = useNavigate();
 
   const [title, setTitle] = useState('');
-  const [channel, setChannel] = useState('Social - Instagram');
+  const [contentType, setContentType] = useState('social_post');
   const [department, setDepartment] = useState('Digital Marketing');
   const [campaign, setCampaign] = useState('Summer Vitality 2026');
   const [content, setContent] = useState('');
@@ -30,10 +30,29 @@ export default function SubmitContent() {
   const [auditResult, setAuditResult] = useState(null);
   const [appliedCorrections, setAppliedCorrections] = useState({});
 
+  const contentTypes = [
+    { value: 'social_post', label: 'Social Post (Instagram, TikTok, LinkedIn)' },
+    { value: 'email', label: 'Email Newsletter' },
+    { value: 'ad_copy', label: 'Digital Ad Copy (Meta, Google)' },
+    { value: 'blog_post', label: 'Blog Article / Story' },
+    { value: 'website_copy', label: 'Website Landing Page Copy' },
+    { value: 'press_release', label: 'Corporate Press Release' },
+    { value: 'other', label: 'In-Store Signage / Menu' }
+  ];
+
   // Preset selector
   const handleSelectPreset = (preset) => {
     setTitle(preset.title);
-    setChannel(preset.channel);
+    if (preset.channel.includes('Instagram') || preset.channel.includes('Social') || preset.channel.includes('LinkedIn')) {
+      setContentType('social_post');
+    } else if (preset.channel.includes('Email')) {
+      setContentType('email');
+    } else if (preset.channel.includes('Ad')) {
+      setContentType('ad_copy');
+    } else {
+      setContentType('social_post');
+    }
+
     setDepartment(preset.department);
     setCampaign(preset.campaign);
     setContent(preset.content);
@@ -44,7 +63,7 @@ export default function SubmitContent() {
 
   const handleRunAudit = () => {
     if (!content.trim()) {
-      alert('Please enter or paste some content to audit.');
+      alert('Please enter or paste some marketing content to audit.');
       return;
     }
 
@@ -53,10 +72,11 @@ export default function SubmitContent() {
 
     // Simulate AI model latency
     setTimeout(() => {
-      const result = analyzeContentWithAI(content, { title, channel, department });
+      const selectedTypeLabel = contentTypes.find((c) => c.value === contentType)?.label || contentType;
+      const result = analyzeContentWithAI(content, { title, channel: selectedTypeLabel, department });
       setAuditResult(result);
       setIsAuditing(false);
-      showToast(`AI audit complete. Brand compliance score: ${result.score}%`);
+      showToast(`AI brand audit complete. Score: ${result.score}%`);
     }, 600);
   };
 
@@ -79,9 +99,10 @@ export default function SubmitContent() {
       return;
     }
 
+    const selectedTypeLabel = contentTypes.find((c) => c.value === contentType)?.label || contentType;
     const { submission } = submitNewContent({
-      title: title || 'Draft Social Copy',
-      channel,
+      title: title || 'Draft Marketing Copy',
+      channel: selectedTypeLabel,
       department,
       campaign,
       content
@@ -92,41 +113,30 @@ export default function SubmitContent() {
     navigate('/review');
   };
 
-  const channels = [
-    'Social - Instagram',
-    'Social - TikTok',
-    'Social - LinkedIn',
-    'Email Newsletter',
-    'In-Store Signage',
-    'Digital Ads',
-    'Press Release',
-    'Website Blog'
-  ];
-
   return (
     <div className="space-y-6">
       <PageHeader
         title="Submit Content for AI Audit"
         subtitle={`Validate marketing and corporate copy against FreshBite brand guidelines, legal claims restrictions, and trademark standards before publication.`}
         badge={
-          <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-800 border border-emerald-200 flex items-center gap-1">
-            <Sparkles className="w-3 h-3 text-emerald-600" />
-            Gemini AI Engine
+          <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200 flex items-center gap-1">
+            <Sparkles className="w-3 h-3 text-indigo-600" />
+            AI Governance Engine
           </span>
         }
       />
 
       {/* Preset Quick-Load Banner */}
-      <div className="bg-gradient-to-r from-emerald-50 via-teal-50 to-slate-50 border border-emerald-200/90 rounded-2xl p-4 sm:p-5 shadow-2xs">
+      <div className="bg-gradient-to-r from-indigo-50/60 via-purple-50/40 to-slate-50 border border-indigo-200/80 rounded-2xl p-4 sm:p-5 shadow-2xs">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-3">
           <div className="flex items-center gap-2">
-            <Wand2 className="w-4 h-4 text-emerald-700" />
-            <h3 className="text-xs font-bold uppercase tracking-wider text-emerald-950">
+            <Wand2 className="w-4 h-4 text-indigo-700" />
+            <h3 className="text-xs font-bold uppercase tracking-wider text-indigo-950">
               Interactive Test Presets (Instant Demo)
             </h3>
           </div>
-          <span className="text-[11px] text-emerald-800 font-medium">
-            Click a preset below to populate realistic test copy:
+          <span className="text-[11px] text-slate-500 font-medium">
+            Click any test copy below to instantly test the compliance engine:
           </span>
         </div>
 
@@ -135,17 +145,17 @@ export default function SubmitContent() {
             <button
               key={p.id}
               onClick={() => handleSelectPreset(p)}
-              className="text-left p-3 rounded-xl bg-white border border-emerald-100 hover:border-emerald-400 hover:shadow-xs transition-all flex flex-col justify-between group cursor-pointer"
+              className="text-left p-3 rounded-xl bg-white border border-slate-200/90 hover:border-indigo-400 hover:shadow-xs transition-all flex flex-col justify-between group cursor-pointer"
             >
               <div>
-                <p className="text-xs font-bold text-slate-800 group-hover:text-emerald-800 leading-snug">
+                <p className="text-xs font-bold text-slate-800 group-hover:text-indigo-700 leading-snug">
                   {p.label}
                 </p>
                 <p className="text-[11px] text-slate-500 mt-1 line-clamp-2">
                   {p.content}
                 </p>
               </div>
-              <span className="text-[10px] text-emerald-700 font-semibold mt-2 block">
+              <span className="text-[10px] text-indigo-600 font-semibold mt-2 block">
                 Load this copy &rarr;
               </span>
             </button>
@@ -158,7 +168,7 @@ export default function SubmitContent() {
         {/* Left Column: Form & Editor (7 cols) */}
         <div className="lg:col-span-7 space-y-5">
           <Card
-            title="Draft Metadata & Content"
+            title="Draft Content & Metadata"
             subtitle="Specify campaign context and input content text for scanning"
           >
             <div className="space-y-4">
@@ -171,23 +181,24 @@ export default function SubmitContent() {
                   placeholder="e.g. Summer Elixir Instagram Blast"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  className="w-full text-xs p-2.5 rounded-xl border border-slate-200 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none"
+                  className="w-full text-xs p-2.5 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none"
                 />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {/* Content Type Selector */}
                 <div>
                   <label className="block text-xs font-bold text-slate-800 mb-1">
-                    Channel
+                    Content Type *
                   </label>
                   <select
-                    value={channel}
-                    onChange={(e) => setChannel(e.target.value)}
-                    className="w-full text-xs p-2.5 rounded-xl border border-slate-200 focus:border-emerald-500 outline-none"
+                    value={contentType}
+                    onChange={(e) => setContentType(e.target.value)}
+                    className="w-full text-xs p-2.5 rounded-xl border border-slate-200 focus:border-indigo-500 outline-none bg-white font-medium"
                   >
-                    {channels.map((ch) => (
-                      <option key={ch} value={ch}>
-                        {ch}
+                    {contentTypes.map((type) => (
+                      <option key={type.value} value={type.value}>
+                        {type.label}
                       </option>
                     ))}
                   </select>
@@ -201,7 +212,7 @@ export default function SubmitContent() {
                     type="text"
                     value={department}
                     onChange={(e) => setDepartment(e.target.value)}
-                    className="w-full text-xs p-2.5 rounded-xl border border-slate-200 focus:border-emerald-500 outline-none"
+                    className="w-full text-xs p-2.5 rounded-xl border border-slate-200 focus:border-indigo-500 outline-none"
                   />
                 </div>
 
@@ -213,7 +224,7 @@ export default function SubmitContent() {
                     type="text"
                     value={campaign}
                     onChange={(e) => setCampaign(e.target.value)}
-                    className="w-full text-xs p-2.5 rounded-xl border border-slate-200 focus:border-emerald-500 outline-none"
+                    className="w-full text-xs p-2.5 rounded-xl border border-slate-200 focus:border-indigo-500 outline-none"
                   />
                 </div>
               </div>
@@ -229,10 +240,10 @@ export default function SubmitContent() {
                 </div>
                 <textarea
                   rows={8}
-                  placeholder="Enter or paste promotional text, social captions, newsletters, or signage copy..."
+                  placeholder="Enter or paste promotional text, social captions, newsletters, ad slogans, or in-store signage..."
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
-                  className="w-full text-xs p-3.5 rounded-xl border border-slate-200 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none font-sans leading-relaxed text-slate-900"
+                  className="w-full text-xs p-3.5 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none font-sans leading-relaxed text-slate-900"
                 />
               </div>
 
@@ -256,10 +267,10 @@ export default function SubmitContent() {
                     type="button"
                     onClick={handleRunAudit}
                     disabled={isAuditing || !content.trim()}
-                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-semibold text-xs shadow-md shadow-emerald-950/20 disabled:opacity-50 transition-all cursor-pointer"
+                    className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs shadow-md shadow-indigo-950/20 disabled:opacity-50 transition-all cursor-pointer"
                   >
                     <Sparkles className={`w-4 h-4 ${isAuditing ? 'animate-spin' : ''}`} />
-                    <span>{isAuditing ? 'Analyzing Brand Voice...' : 'Run AI Brand Audit'}</span>
+                    <span>{isAuditing ? 'Auditing Brand Guidelines...' : 'Run AI Brand Audit'}</span>
                   </button>
 
                   {auditResult && (
@@ -278,22 +289,22 @@ export default function SubmitContent() {
           </Card>
         </div>
 
-        {/* Right Column: AI Analysis & Findings (5 cols) */}
+        {/* Right Column: AI Analysis Status Display & Findings (5 cols) */}
         <div className="lg:col-span-5 space-y-5">
           {!auditResult ? (
             <div className="h-full min-h-[380px] rounded-2xl border border-dashed border-slate-200 bg-white p-6 flex flex-col items-center justify-center text-center">
-              <div className="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center mb-4">
+              <div className="w-14 h-14 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mb-4 shadow-2xs">
                 <Sparkles className="w-7 h-7" />
               </div>
               <h4 className="text-base font-bold text-slate-900">
                 AI Compliance Inspection
               </h4>
               <p className="text-xs text-slate-500 max-w-xs mt-1.5 leading-relaxed">
-                Enter your copy or choose one of the test presets above, then click <strong>"Run AI Brand Audit"</strong> to inspect tone, legal claims & trademarks.
+                Enter your copy or choose one of the test presets above, then click <strong>"Run AI Brand Audit"</strong> to inspect tone, legal claims, and trademarks.
               </p>
               <div className="mt-6 flex items-center gap-2 text-[11px] text-slate-400">
-                <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                <span>Audited against 26 FreshBite guidelines</span>
+                <ShieldCheck className="w-4 h-4 text-indigo-600" />
+                <span>Audited against 26 FreshBite rules</span>
               </div>
             </div>
           ) : (
@@ -387,10 +398,10 @@ export default function SubmitContent() {
                         {f.suggestion && (
                           <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
                             <div className="min-w-0 flex-1">
-                              <span className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider block">
+                              <span className="text-[10px] font-bold text-indigo-700 uppercase tracking-wider block">
                                 Suggested Correction:
                               </span>
-                              <span className="text-xs font-medium text-emerald-950 block truncate">
+                              <span className="text-xs font-medium text-slate-900 block truncate">
                                 "{f.suggestion}"
                               </span>
                             </div>
@@ -402,7 +413,7 @@ export default function SubmitContent() {
                               className={`shrink-0 text-xs px-2.5 py-1.5 rounded-lg font-semibold flex items-center gap-1 transition-all cursor-pointer ${
                                 isApplied
                                   ? 'bg-emerald-100 text-emerald-800'
-                                  : 'bg-emerald-700 text-white hover:bg-emerald-800 shadow-2xs'
+                                  : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-2xs'
                               }`}
                             >
                               {isApplied ? (

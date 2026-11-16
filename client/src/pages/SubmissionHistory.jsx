@@ -70,11 +70,11 @@ export default function SubmissionHistory() {
   const handleExportData = () => {
     const csvContent =
       'data:text/csv;charset=utf-8,' +
-      ['ID,Title,Channel,Submitter,Status,Score,Date']
+      ['ID,Title,Channel,Submitter,Status,Score,Date,ReviewDecision']
         .concat(
           filteredSubmissions.map(
             (s) =>
-              `"${s.id}","${s.title}","${s.channel}","${s.submitter.name}","${s.status}",${s.score},"${s.submittedAt}"`
+              `"${s.id}","${s.title}","${s.channel}","${s.submitter.name}","${s.status}",${s.score},"${s.submittedAt}","${(s.reviewerNotes || '').replace(/"/g, '""')}"`
           )
         )
         .join('\n');
@@ -82,11 +82,11 @@ export default function SubmissionHistory() {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `unifyra_freshbite_audit_export_${Date.now()}.csv`);
+    link.setAttribute('download', `unifyra_audit_history_${Date.now()}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    showToast('Exported audit logs to CSV successfully.');
+    showToast('Exported audit history to CSV successfully.');
   };
 
   return (
@@ -121,7 +121,7 @@ export default function SubmissionHistory() {
               placeholder="Search history by title, submitter name, ID, or keywords..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 focus:border-emerald-500 focus:bg-white text-xs rounded-xl pl-9 pr-4 py-2 text-slate-900 outline-none transition-all"
+              className="w-full bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white text-xs rounded-xl pl-9 pr-4 py-2 text-slate-900 outline-none transition-all"
             />
           </div>
 
@@ -130,7 +130,7 @@ export default function SubmissionHistory() {
             <select
               value={selectedStatus}
               onChange={(e) => setSelectedStatus(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 text-xs font-medium text-slate-700 rounded-xl px-3 py-2 outline-none focus:border-emerald-500 cursor-pointer"
+              className="w-full bg-slate-50 border border-slate-200 text-xs font-medium text-slate-700 rounded-xl px-3 py-2 outline-none focus:border-indigo-500 cursor-pointer"
             >
               {statuses.map((st) => (
                 <option key={st} value={st}>
@@ -145,7 +145,7 @@ export default function SubmissionHistory() {
             <select
               value={selectedChannel}
               onChange={(e) => setSelectedChannel(e.target.value)}
-              className="w-full bg-slate-50 border border-slate-200 text-xs font-medium text-slate-700 rounded-xl px-3 py-2 outline-none focus:border-emerald-500 cursor-pointer"
+              className="w-full bg-slate-50 border border-slate-200 text-xs font-medium text-slate-700 rounded-xl px-3 py-2 outline-none focus:border-indigo-500 cursor-pointer"
             >
               {channels.map((ch) => (
                 <option key={ch} value={ch}>
@@ -185,7 +185,7 @@ export default function SubmissionHistory() {
                       <ArrowUpDown className="w-3 h-3" />
                     </div>
                   </th>
-                  <th className="py-3.5 px-4">Review Status</th>
+                  <th className="py-3.5 px-4">Review Decision</th>
                   <th
                     className="py-3.5 px-4 cursor-pointer hover:text-slate-900"
                     onClick={() => {
@@ -214,7 +214,7 @@ export default function SubmissionHistory() {
                         </span>
                         <span
                           onClick={() => setSelectedSubmission(sub)}
-                          className="font-bold text-slate-900 hover:text-emerald-700 cursor-pointer"
+                          className="font-bold text-slate-900 hover:text-indigo-600 cursor-pointer"
                         >
                           {sub.title}
                         </span>
@@ -268,7 +268,7 @@ export default function SubmissionHistory() {
         )}
       </div>
 
-      {/* Detail Modal */}
+      {/* Detail Inspection Modal */}
       {selectedSubmission && (
         <Modal
           isOpen={!!selectedSubmission}
@@ -318,7 +318,7 @@ export default function SubmissionHistory() {
                       </div>
                       <p className="text-slate-700">{f.explanation}</p>
                       {f.suggestion && (
-                        <p className="text-emerald-900 bg-emerald-50 p-1.5 rounded font-mono text-[11px] border border-emerald-200">
+                        <p className="text-indigo-900 bg-indigo-50 p-1.5 rounded font-mono text-[11px] border border-indigo-200">
                           Fix: {f.suggestion}
                         </p>
                       )}
