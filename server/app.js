@@ -5,6 +5,7 @@ const morgan = require('morgan');
 
 const healthRoutes = require('./routes/healthRoutes');
 const guidelineRoutes = require('./routes/guidelineRoutes');
+const submissionRoutes = require('./routes/submissionRoutes');
 const { notFoundHandler, errorHandler } = require('./middleware/errorHandler');
 
 const app = express();
@@ -32,6 +33,7 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // API Routes
 app.use('/api/health', healthRoutes);
 app.use('/api/guidelines', guidelineRoutes);
+app.use('/api/submissions', submissionRoutes);
 
 // 404 Not Found handler
 app.use(notFoundHandler);
