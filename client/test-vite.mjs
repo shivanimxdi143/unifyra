@@ -11,6 +11,7 @@ async function testVite() {
 
   const routes = [
     '/',
+    '/login',
     '/guidelines',
     '/submit',
     '/review',

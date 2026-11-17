@@ -9,15 +9,18 @@ import {
   CheckCircle2,
   AlertTriangle,
   Leaf,
-  ChevronDown
+  ChevronDown,
+  LogOut
 } from 'lucide-react';
 import { BRAND_PROFILE } from '../../services/mockData';
+import { ROLE_CONFIGS } from '../../services/authService';
 
 export default function TopNav({
   onToggleSidebar,
   currentRole = 'Brand Manager',
   onRoleChange,
-  onResetData
+  onResetData,
+  onLogout
 }) {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showRoleMenu, setShowRoleMenu] = useState(false);
@@ -51,10 +54,12 @@ export default function TopNav({
   ];
 
   const roles = [
-    { id: 'manager', label: 'Brand Manager', desc: 'Manage guidelines & system audits' },
-    { id: 'creator', label: 'Content Creator', desc: 'Draft & run AI compliance checks' },
-    { id: 'reviewer', label: 'Compliance Reviewer', desc: 'Approve, reject or request revisions' }
+    { id: 'manager', label: 'Brand Manager', desc: 'Manage guidelines & monitor compliance' },
+    { id: 'employee', label: 'Employee', desc: 'Submit content & apply AI corrections' },
+    { id: 'reviewer', label: 'Reviewer', desc: 'Review AI findings & approve/reject' }
   ];
+
+  const persona = ROLE_CONFIGS[currentRole] || ROLE_CONFIGS['Brand Manager'];
 
   return (
     <header className="sticky top-0 z-30 h-16 bg-white/95 backdrop-blur-md border-b border-slate-200/90 px-4 sm:px-6 flex items-center justify-between">
@@ -145,9 +150,38 @@ export default function TopNav({
                   <span className="text-[10px] text-slate-500 font-normal">{r.desc}</span>
                 </button>
               ))}
+
+              {onLogout && (
+                <div className="pt-1.5 mt-1.5 border-t border-slate-100">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowRoleMenu(false);
+                      onLogout();
+                    }}
+                    className="w-full text-left px-3 py-2 text-xs text-rose-600 hover:bg-rose-50 transition-colors flex items-center gap-2 cursor-pointer font-semibold"
+                  >
+                    <LogOut className="w-3.5 h-3.5 text-rose-500" />
+                    <span>Exit Demo Session</span>
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
+
+        {/* Exit Demo Quick Action */}
+        {onLogout && (
+          <button
+            type="button"
+            onClick={onLogout}
+            title="Exit Demo Session (Return to Login)"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-lg transition-colors border border-rose-200/80 cursor-pointer"
+          >
+            <LogOut className="w-3.5 h-3.5 text-rose-500" />
+            <span className="hidden sm:inline">Exit Demo</span>
+          </button>
+        )}
 
         {/* Notification Center */}
         <div className="relative">
@@ -193,14 +227,14 @@ export default function TopNav({
           )}
         </div>
 
-        {/* Profile Avatar with subtle purple/blue gradient */}
+        {/* Profile Avatar with dynamic role persona */}
         <div className="flex items-center gap-2 pl-2 border-l border-slate-200">
           <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-600 via-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-xs ring-2 ring-slate-100 shadow-2xs">
-            SH
+            {persona.personaInitials}
           </div>
           <div className="hidden lg:block text-left">
-            <span className="text-xs font-bold text-slate-900 block leading-tight">Shivani</span>
-            <span className="text-[10px] text-slate-500 block leading-none">CoreSync Lead</span>
+            <span className="text-xs font-bold text-slate-900 block leading-tight">{persona.personaName}</span>
+            <span className="text-[10px] text-slate-500 block leading-none">{persona.personaSubtitle}</span>
           </div>
         </div>
       </div>

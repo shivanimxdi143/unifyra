@@ -8,45 +8,66 @@ import {
   History,
   Sparkles,
   Layers,
-  Leaf
+  Leaf,
+  LogOut
 } from 'lucide-react';
 import { BRAND_PROFILE } from '../../services/mockData';
+import { ROLE_CONFIGS } from '../../services/authService';
 
-export default function Sidebar({ pendingCount = 2, isOpen, onClose }) {
-  const navItems = [
+export default function Sidebar({
+  pendingCount = 2,
+  isOpen,
+  onClose,
+  currentRole = 'Brand Manager',
+  onLogout
+}) {
+  const allNavItems = [
     {
       to: '/',
       label: 'Dashboard',
       icon: LayoutDashboard,
-      badge: null
+      badge: null,
+      roles: ['Brand Manager', 'Reviewer']
     },
     {
       to: '/guidelines',
       label: 'Brand Guidelines',
       icon: ShieldCheck,
-      badge: `${BRAND_PROFILE.rulesEnforced} rules`
+      badge: `${BRAND_PROFILE.rulesEnforced} rules`,
+      roles: ['Brand Manager']
     },
     {
       to: '/submit',
       label: 'Submit Content',
       icon: PenTool,
       badge: 'AI Audit',
-      badgeColor: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/40'
+      badgeColor: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/40',
+      roles: ['Employee']
     },
     {
       to: '/review',
       label: 'Review Queue',
       icon: ClipboardCheck,
       badge: pendingCount > 0 ? pendingCount : null,
-      badgeColor: 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+      badgeColor: 'bg-amber-500/20 text-amber-300 border-amber-500/40',
+      roles: ['Reviewer']
     },
     {
       to: '/history',
       label: 'Submission History',
       icon: History,
-      badge: null
+      badge: null,
+      roles: ['Brand Manager', 'Employee', 'Reviewer']
     }
   ];
+
+  // Role-based navigation:
+  // Brand Manager: Dashboard, Brand Guidelines, Submission History
+  // Employee: Submit Content, Submission History
+  // Reviewer: Dashboard, Review Queue, Submission History
+  const navItems = allNavItems.filter((item) => item.roles.includes(currentRole));
+
+  const persona = ROLE_CONFIGS[currentRole] || ROLE_CONFIGS['Brand Manager'];
 
   return (
     <>
@@ -178,13 +199,25 @@ export default function Sidebar({ pendingCount = 2, isOpen, onClose }) {
           <div className="flex items-center justify-between px-2 pt-0.5">
             <div className="flex items-center gap-2.5 min-w-0">
               <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-600 via-purple-600 to-pink-500 flex items-center justify-center text-white font-bold text-xs shadow-inner">
-                SH
+                {persona.personaInitials}
               </div>
               <div className="min-w-0">
-                <p className="text-xs font-semibold text-white truncate">Shivani</p>
-                <p className="text-[10px] text-indigo-300 font-medium truncate">Brand Manager</p>
+                <p className="text-xs font-semibold text-white truncate">{persona.personaName}</p>
+                <p className="text-[10px] text-indigo-300 font-medium truncate">{persona.name}</p>
               </div>
             </div>
+
+            {onLogout && (
+              <button
+                type="button"
+                onClick={onLogout}
+                title="Exit Demo Session"
+                className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors border border-transparent hover:border-rose-500/20 cursor-pointer"
+                aria-label="Exit Demo"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            )}
           </div>
         </div>
       </aside>

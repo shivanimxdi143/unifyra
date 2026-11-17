@@ -4,7 +4,7 @@ import Sidebar from '../components/navigation/Sidebar';
 import TopNav from '../components/navigation/TopNav';
 import { resetApplicationData, getSubmissionsAwaitingReview } from '../services/contentService';
 
-export default function MainLayout({ currentRole, onRoleChange }) {
+export default function MainLayout({ currentRole, onRoleChange, onLogout }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState(null);
   const [pendingCount, setPendingCount] = useState(0);
@@ -56,6 +56,8 @@ export default function MainLayout({ currentRole, onRoleChange }) {
         pendingCount={pendingCount}
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
+        currentRole={currentRole}
+        onLogout={onLogout}
       />
 
       {/* Main Content Area */}
@@ -66,6 +68,7 @@ export default function MainLayout({ currentRole, onRoleChange }) {
           currentRole={currentRole}
           onRoleChange={onRoleChange}
           onResetData={handleResetData}
+          onLogout={onLogout}
         />
 
         {/* Global Toast Alert */}
