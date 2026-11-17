@@ -12,7 +12,12 @@ import Card from '../components/common/Card';
 import StatusBadge from '../components/common/StatusBadge';
 import ScoreMeter from '../components/common/ScoreMeter';
 import { DEMO_PRESETS } from '../services/mockData';
-import { analyzeContentWithAI, submitNewContent } from '../services/contentService';
+import {
+  createAndAnalyzeSubmission,
+  resubmitAndReanalyze,
+  ensureDefaultGuidelines
+} from '../services/contentService';
+import { getErrorMessage } from '../services/api';
 import { useOutletContext, useNavigate } from 'react-router-dom';
 
 export default function SubmitContent() {
@@ -25,10 +30,12 @@ export default function SubmitContent() {
   const [campaign, setCampaign] = useState('Summer Vitality 2026');
   const [content, setContent] = useState('');
 
-  // AI Audit State
+  // AI Audit & Submission State
+  const [currentSubmission, setCurrentSubmission] = useState(null);
   const [isAuditing, setIsAuditing] = useState(false);
   const [auditResult, setAuditResult] = useState(null);
   const [appliedCorrections, setAppliedCorrections] = useState({});
+  const [auditError, setAuditError] = useState(null);
 
   const contentTypes = [
     { value: 'social_post', label: 'Social Post (Instagram, TikTok, LinkedIn)' },
@@ -56,28 +63,105 @@ export default function SubmitContent() {
     setDepartment(preset.department);
     setCampaign(preset.campaign);
     setContent(preset.content);
+    setCurrentSubmission(null);
     setAuditResult(null);
+    setAuditError(null);
     setAppliedCorrections({});
     showToast(`Loaded preset: "${preset.title}"`);
   };
 
-  const handleRunAudit = () => {
+  const handleRunAudit = async () => {
     if (!content.trim()) {
       alert('Please enter or paste some marketing content to audit.');
       return;
     }
 
     setIsAuditing(true);
+    setAuditError(null);
     setAppliedCorrections({});
 
-    // Simulate AI model latency
-    setTimeout(() => {
-      const selectedTypeLabel = contentTypes.find((c) => c.value === contentType)?.label || contentType;
-      const result = analyzeContentWithAI(content, { title, channel: selectedTypeLabel, department });
-      setAuditResult(result);
+    try {
+      // Ensure there are guidelines in DB before running analysis
+      await ensureDefaultGuidelines();
+
+      let activeSub = currentSubmission;
+      let rawFindings = [];
+
+      if (!activeSub) {
+        // Step 1: Create submission & run initial Gemini analysis
+        const result = await createAndAnalyzeSubmission({
+          content: content.trim(),
+          contentType,
+          submittedBy: 'Elena Rostova (Social Media Lead)'
+        });
+        activeSub = result.submission;
+        rawFindings = result.findings;
+        setCurrentSubmission(activeSub);
+      } else {
+        // Resubmit and re-analyze existing submission
+        const result = await resubmitAndReanalyze(activeSub._id, {
+          content: content.trim(),
+          contentType
+        });
+        rawFindings = result.findings || [];
+        setCurrentSubmission(prev => ({ ...prev, status: result.status || 'analyzed' }));
+      }
+
+      // Compute compliance scores from real findings
+      let penalty = 0;
+      let criticalCount = 0;
+      let highCount = 0;
+      let mediumCount = 0;
+
+      rawFindings.forEach((f) => {
+        if (f.severity === 'critical') {
+          penalty += 24;
+          criticalCount++;
+        } else if (f.severity === 'high') {
+          penalty += 14;
+          highCount++;
+        } else if (f.severity === 'medium') {
+          penalty += 8;
+          mediumCount++;
+        } else {
+          penalty += 4;
+        }
+      });
+
+      const overallScore = Math.max(25, Math.min(100, 100 - penalty));
+      const toneScore = Math.max(30, Math.min(100, Math.round(100 - (criticalCount * 20 + highCount * 12 + mediumCount * 6))));
+      const claimsScore = Math.max(25, Math.min(100, Math.round(100 - (criticalCount * 30 + highCount * 10))));
+      const trademarkScore = Math.max(35, Math.min(100, Math.round(100 - (highCount * 15 + mediumCount * 8))));
+
+      setAuditResult({
+        score: overallScore,
+        status: 'analyzed', // AI analyzes; never auto-approves
+        toneScore,
+        claimsScore,
+        trademarkScore,
+        summary:
+          rawFindings.length === 0
+            ? 'Outstanding brand alignment. Content complies with FreshBite tone, legal claims, trademark designations, and promotional standards.'
+            : `${rawFindings.length} brand guideline ${rawFindings.length === 1 ? 'violation' : 'violations'} identified by Gemini AI. Review recommendations and dispatch to the human review queue.`,
+        findings: rawFindings.map((f, idx) => ({
+          id: f._id || `f-${idx}`,
+          ruleId: f.ruleId ? String(f.ruleId).slice(-6) : 'BRAND',
+          ruleTitle: f.ruleId ? `Rule #${String(f.ruleId).slice(-6)}` : 'Brand Governance Rule',
+          severity: f.severity,
+          offendingText: f.offendingText,
+          explanation: f.explanation,
+          suggestion: f.suggestedCorrection
+        }))
+      });
+
+      showToast(`AI brand audit complete. Ready for human review (Score: ${overallScore}%).`);
+    } catch (err) {
+      const msg = getErrorMessage(err);
+      setAuditError(msg);
+      showToast(`Analysis error: ${msg}`);
+    } finally {
       setIsAuditing(false);
-      showToast(`AI brand audit complete. Score: ${result.score}%`);
-    }, 600);
+    }
   };
 
   const handleApplyCorrection = (finding) => {
@@ -99,16 +183,10 @@ export default function SubmitContent() {
       return;
     }
 
-    const selectedTypeLabel = contentTypes.find((c) => c.value === contentType)?.label || contentType;
-    const { submission } = submitNewContent({
-      title: title || 'Draft Marketing Copy',
-      channel: selectedTypeLabel,
-      department,
-      campaign,
-      content
-    });
-
-    showToast(`Submission ${submission.id} dispatched to Reviewer Queue!`);
+    const subIdDisplay = currentSubmission?._id
+      ? `#${currentSubmission._id.slice(-6)}`
+      : '';
+    showToast(`Submission ${subIdDisplay} dispatched to Reviewer Queue!`);
     window.dispatchEvent(new Event('unifyra-data-updated'));
     navigate('/review');
   };
@@ -291,6 +369,13 @@ export default function SubmitContent() {
 
         {/* Right Column: AI Analysis Status Display & Findings (5 cols) */}
         <div className="lg:col-span-5 space-y-5">
+          {auditError && (
+            <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-800 text-xs shadow-2xs">
+              <p className="font-bold mb-1">AI Audit Service Notice</p>
+              <p>{auditError}</p>
+            </div>
+          )}
+
           {!auditResult ? (
             <div className="h-full min-h-[380px] rounded-2xl border border-dashed border-slate-200 bg-white p-6 flex flex-col items-center justify-center text-center">
               <div className="w-14 h-14 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center mb-4 shadow-2xs">

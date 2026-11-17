@@ -1,15 +1,36 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import Sidebar from '../components/navigation/Sidebar';
 import TopNav from '../components/navigation/TopNav';
-import { resetApplicationData, getStoredSubmissions } from '../services/contentService';
+import { resetApplicationData, getSubmissionsAwaitingReview } from '../services/contentService';
 
 export default function MainLayout({ currentRole, onRoleChange }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState(null);
+  const [pendingCount, setPendingCount] = useState(0);
 
-  const submissions = getStoredSubmissions();
-  const pendingCount = submissions.filter((s) => s.status === 'pending').length;
+  useEffect(() => {
+    let isMounted = true;
+    getSubmissionsAwaitingReview()
+      .then((pending) => {
+        if (isMounted) setPendingCount(pending.length);
+      })
+      .catch(() => {});
+
+    const onUpdate = () => {
+      getSubmissionsAwaitingReview()
+        .then((pending) => {
+          if (isMounted) setPendingCount(pending.length);
+        })
+        .catch(() => {});
+    };
+
+    window.addEventListener('unifyra-data-updated', onUpdate);
+    return () => {
+      isMounted = false;
+      window.removeEventListener('unifyra-data-updated', onUpdate);
+    };
+  }, []);
 
   const showToast = (msg) => {
     setToastMessage(msg);
@@ -18,10 +39,14 @@ export default function MainLayout({ currentRole, onRoleChange }) {
     }, 3500);
   };
 
-  const handleResetData = () => {
-    resetApplicationData();
-    showToast('Demo data restored to initial FreshBite baseline.');
-    window.dispatchEvent(new Event('unifyra-data-updated'));
+  const handleResetData = async () => {
+    try {
+      await resetApplicationData();
+      showToast('FreshBite guidelines synchronized with backend.');
+      window.dispatchEvent(new Event('unifyra-data-updated'));
+    } catch {
+      showToast('Failed to reset backend data.');
+    }
   };
 
   return (

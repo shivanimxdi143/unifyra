@@ -16,14 +16,18 @@ import EmptyState from '../components/common/EmptyState';
 import { BRAND_PROFILE } from '../services/mockData';
 import {
   getStoredGuidelines,
-  saveGuidelines,
-  updateGuideline
+  createNewGuideline,
+  updateExistingGuideline,
+  ensureDefaultGuidelines
 } from '../services/contentService';
+import { getErrorMessage } from '../services/api';
 import { useOutletContext } from 'react-router-dom';
 
 export default function BrandGuidelines() {
   const { showToast } = useOutletContext();
-  const [guidelines, setGuidelines] = useState(() => getStoredGuidelines());
+  const [guidelines, setGuidelines] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [selectedSeverity, setSelectedSeverity] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
@@ -31,6 +35,7 @@ export default function BrandGuidelines() {
   // Modals for Add & Edit
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingGuideline, setEditingGuideline] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -43,13 +48,47 @@ export default function BrandGuidelines() {
     dontExample: ''
   });
 
-  const loadData = useCallback(() => {
-    setGuidelines(getStoredGuidelines());
+  const loadData = useCallback(async () => {
+    try {
+      const data = await getStoredGuidelines();
+      setError(null);
+      const normalized = (data || []).map((g) => ({
+        _id: g._id,
+        id: g._id ? `BG-${g._id.slice(-4).toUpperCase()}` : (g.id || 'BG-000'),
+        brandName: g.brandName || 'FreshBite',
+        title: g.title,
+        category: g.category || 'Tone & Voice',
+        severity: g.rules?.[0]?.severity || g.severity || 'medium',
+        enforcement: 'Strict',
+        description: g.description || '',
+        rules: g.rules || [],
+        doExample: g.rules?.[0]?.examples?.[0] || g.doExample || '',
+        dontExample: g.rules?.[0]?.examples?.[1] || g.dontExample || '',
+        updatedAt: g.updatedAt ? new Date(g.updatedAt).toISOString().split('T')[0] : '2026-11-17'
+      }));
+      setGuidelines(normalized);
+    } catch (err) {
+      setError(getErrorMessage(err));
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
   useEffect(() => {
-    window.addEventListener('unifyra-data-updated', loadData);
-    return () => window.removeEventListener('unifyra-data-updated', loadData);
+    let isMounted = true;
+    Promise.resolve().then(() => {
+      if (isMounted) loadData();
+    });
+
+    const handleUpdate = () => {
+      if (isMounted) loadData();
+    };
+
+    window.addEventListener('unifyra-data-updated', handleUpdate);
+    return () => {
+      isMounted = false;
+      window.removeEventListener('unifyra-data-updated', handleUpdate);
+    };
   }, [loadData]);
 
   const categories = ['All', 'Tone & Voice', 'Health & Claims', 'Trademarks & Naming', 'Promotional Style'];
@@ -93,28 +132,28 @@ export default function BrandGuidelines() {
     });
   };
 
-  const handleSaveAdd = (e) => {
+  const handleSaveAdd = async (e) => {
     e.preventDefault();
     if (!formData.title || !formData.description) {
       alert('Please fill in both Rule Title and Description.');
       return;
     }
 
-    const nextId = `BG-${Math.floor(100 + Math.random() * 900)}`;
-    const created = {
-      id: nextId,
-      ...formData,
-      updatedAt: new Date().toISOString().split('T')[0]
-    };
-
-    const updated = [created, ...guidelines];
-    setGuidelines(updated);
-    saveGuidelines(updated);
-    setIsAddModalOpen(false);
-    showToast(`Guideline ${nextId} created and active in AI audits.`);
+    setIsSubmitting(true);
+    try {
+      await createNewGuideline(formData);
+      setIsAddModalOpen(false);
+      showToast(`Guideline "${formData.title}" created and active in AI audits.`);
+      window.dispatchEvent(new Event('unifyra-data-updated'));
+      await loadData();
+    } catch (err) {
+      showToast(`Failed to create guideline: ${getErrorMessage(err)}`);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleSaveEdit = (e) => {
+  const handleSaveEdit = async (e) => {
     e.preventDefault();
     if (!editingGuideline) return;
     if (!formData.title || !formData.description) {
@@ -122,10 +161,32 @@ export default function BrandGuidelines() {
       return;
     }
 
-    updateGuideline(editingGuideline.id, formData);
-    loadData();
-    setEditingGuideline(null);
-    showToast(`Guideline ${editingGuideline.id} successfully updated.`);
+    setIsSubmitting(true);
+    try {
+      await updateExistingGuideline(editingGuideline._id, formData);
+      setEditingGuideline(null);
+      showToast(`Guideline "${formData.title}" successfully updated.`);
+      window.dispatchEvent(new Event('unifyra-data-updated'));
+      await loadData();
+    } catch (err) {
+      showToast(`Failed to update guideline: ${getErrorMessage(err)}`);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleSeedDefaults = async () => {
+    setIsLoading(true);
+    try {
+      await ensureDefaultGuidelines();
+      showToast('Baseline FreshBite guidelines successfully seeded.');
+      window.dispatchEvent(new Event('unifyra-data-updated'));
+      await loadData();
+    } catch (err) {
+      showToast(`Failed to seed guidelines: ${getErrorMessage(err)}`);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -201,22 +262,46 @@ export default function BrandGuidelines() {
       </div>
 
       {/* Guidelines Grid */}
-      {filteredGuidelines.length === 0 ? (
+      {isLoading ? (
+        <div className="bg-white rounded-2xl border border-slate-200/90 p-12 text-center shadow-2xs">
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-indigo-600 border-t-transparent mb-3" />
+          <p className="text-xs font-semibold text-slate-600">Loading brand guidelines from backend...</p>
+        </div>
+      ) : error ? (
+        <div className="bg-rose-50 border border-rose-200 rounded-2xl p-6 text-center">
+          <p className="text-xs font-bold text-rose-800 mb-2">Error loading guidelines: {error}</p>
+          <button
+            onClick={loadData}
+            className="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-semibold cursor-pointer"
+          >
+            Retry Connection
+          </button>
+        </div>
+      ) : filteredGuidelines.length === 0 ? (
         <EmptyState
           icon={BookOpen}
           title="No guidelines match your filters"
-          description="Try selecting a different category or clearing your search term to see more rules."
+          description={guidelines.length === 0 ? "No brand guidelines exist in the database yet. Seed FreshBite baseline rules to get started." : "Try selecting a different category or clearing your search term to see more rules."}
           action={
-            <button
-              onClick={() => {
-                setSelectedCategory('All');
-                setSelectedSeverity('All');
-                setSearchQuery('');
-              }}
-              className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl cursor-pointer"
-            >
-              Reset Filters
-            </button>
+            guidelines.length === 0 ? (
+              <button
+                onClick={handleSeedDefaults}
+                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-xl cursor-pointer shadow-sm"
+              >
+                Seed Baseline Guidelines
+              </button>
+            ) : (
+              <button
+                onClick={() => {
+                  setSelectedCategory('All');
+                  setSelectedSeverity('All');
+                  setSearchQuery('');
+                }}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-xl cursor-pointer"
+              >
+                Reset Filters
+              </button>
+            )
           }
         />
       ) : (
@@ -324,9 +409,10 @@ export default function BrandGuidelines() {
             </button>
             <button
               onClick={handleSaveAdd}
-              className="px-4 py-2 rounded-xl text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer shadow-sm"
+              disabled={isSubmitting}
+              className="px-4 py-2 rounded-xl text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white cursor-pointer shadow-sm"
             >
-              Save & Enforce Rule
+              {isSubmitting ? 'Saving...' : 'Save & Enforce Rule'}
             </button>
           </>
         }
@@ -449,9 +535,10 @@ export default function BrandGuidelines() {
               </button>
               <button
                 onClick={handleSaveEdit}
-                className="px-4 py-2 rounded-xl text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer shadow-sm"
+                disabled={isSubmitting}
+                className="px-4 py-2 rounded-xl text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white cursor-pointer shadow-sm"
               >
-                Save Changes
+                {isSubmitting ? 'Saving...' : 'Save Changes'}
               </button>
             </>
           }

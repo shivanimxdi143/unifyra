@@ -24,31 +24,84 @@ import {
   CHANNEL_METRICS,
   RECENT_AUDIT_LOGS
 } from '../services/mockData';
-import { getStoredSubmissions } from '../services/contentService';
+import { getStoredSubmissions, getStoredGuidelines } from '../services/contentService';
 
 export default function Dashboard() {
-  const [submissions, setSubmissions] = useState(() => getStoredSubmissions());
+  const [submissions, setSubmissions] = useState([]);
+  const [activeGuidelinesCount, setActiveGuidelinesCount] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
   const [selectedSubmission, setSelectedSubmission] = useState(null);
 
-  const loadData = useCallback(() => {
-    setSubmissions(getStoredSubmissions());
+  const normalizeSubmission = (sub) => {
+    const findings = sub.findings || [];
+    let penalty = 0;
+    findings.forEach((f) => {
+      if (f.severity === 'critical') penalty += 24;
+      else if (f.severity === 'high') penalty += 14;
+      else if (f.severity === 'medium') penalty += 8;
+      else penalty += 4;
+    });
+    const score = Math.max(25, Math.min(100, 100 - penalty));
+
+    return {
+      _id: sub._id,
+      id: sub._id ? `SUB-${sub._id.slice(-4).toUpperCase()}` : (sub.id || 'SUB-000'),
+      title: sub.title || (sub.content ? sub.content.slice(0, 36) + '...' : 'Draft Content'),
+      channel: sub.contentType ? sub.contentType.replace(/_/g, ' ').toUpperCase() : (sub.channel || 'Social Media'),
+      status: sub.status || 'pending',
+      content: sub.content || '',
+      submitter: {
+        name: sub.submittedBy || 'Elena Rostova',
+        avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80'
+      },
+      score,
+      findings,
+      findingsCount: findings.length || sub.findingsCount || 0,
+      submittedAt: sub.createdAt || sub.submittedAt || new Date().toISOString()
+    };
+  };
+
+  const loadData = useCallback(async () => {
+    try {
+      const [subs, guidelines] = await Promise.all([
+        getStoredSubmissions().catch(() => []),
+        getStoredGuidelines().catch(() => [])
+      ]);
+      setSubmissions((subs || []).map(normalizeSubmission));
+      setActiveGuidelinesCount((guidelines || []).length);
+    } catch (err) {
+      console.error('Failed to load dashboard data:', err);
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
   useEffect(() => {
-    window.addEventListener('unifyra-data-updated', loadData);
-    return () => window.removeEventListener('unifyra-data-updated', loadData);
+    let isMounted = true;
+    Promise.resolve().then(() => {
+      if (isMounted) loadData();
+    });
+
+    const handleUpdate = () => {
+      if (isMounted) loadData();
+    };
+
+    window.addEventListener('unifyra-data-updated', handleUpdate);
+    return () => {
+      isMounted = false;
+      window.removeEventListener('unifyra-data-updated', handleUpdate);
+    };
   }, [loadData]);
 
-  // Metric Computations
-  const totalSubmissionsCount = submissions.length + 338;
-  const pendingSubmissions = submissions.filter((s) => s.status === 'pending');
+  // Metric Computations (Real backend data + baseline demo stats labeled per Task 10)
+  const totalSubmissionsCount = submissions.length;
+  const pendingSubmissions = submissions.filter((s) => s.status === 'analyzed' || s.status === 'pending');
   const approvedSubmissions = submissions.filter((s) => s.status === 'approved');
-  const approvedCount = approvedSubmissions.length + 294;
 
   const totalViolationsDetected = submissions.reduce(
     (sum, sub) => sum + (sub.findings?.length || sub.findingsCount || 0),
     0
-  ) + 142;
+  );
 
   const recentSubmissions = submissions.slice(0, 5);
 
@@ -98,15 +151,15 @@ export default function Dashboard() {
             <span className="text-3xl font-extrabold text-slate-900 tracking-tight">
               {totalSubmissionsCount}
             </span>
-            <span className="text-xs font-semibold text-indigo-600 flex items-center">
-              +18 this week
+            <span className="text-xs font-semibold text-emerald-600 flex items-center">
+              Real-Time
             </span>
           </div>
           <p className="mt-1 text-xs text-slate-500">
             Across social, newsletters & ad channels
           </p>
           <div className="mt-3 w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
-            <div className="bg-indigo-500 h-full rounded-full" style={{ width: '88%' }} />
+            <div className="bg-indigo-500 h-full rounded-full" style={{ width: `${Math.min(100, (totalSubmissionsCount || 1) * 20)}%` }} />
           </div>
         </div>
 
@@ -150,17 +203,17 @@ export default function Dashboard() {
           </div>
           <div className="mt-3 flex items-baseline gap-2">
             <span className="text-3xl font-extrabold text-slate-900 tracking-tight">
-              {approvedCount}
+              {approvedSubmissions.length}
             </span>
             <span className="text-xs font-semibold text-emerald-600">
-              94.2% pass rate
+              Certified
             </span>
           </div>
           <p className="mt-1 text-xs text-slate-500">
-            Certified compliant for public release
+            Approved by human reviewers for release
           </p>
           <div className="mt-3 w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
-            <div className="bg-emerald-500 h-full rounded-full" style={{ width: '94%' }} />
+            <div className="bg-emerald-500 h-full rounded-full" style={{ width: `${Math.min(100, (approvedSubmissions.length || 1) * 25)}%` }} />
           </div>
         </div>
 
@@ -179,14 +232,14 @@ export default function Dashboard() {
               {totalViolationsDetected}
             </span>
             <span className="text-xs font-semibold text-rose-600">
-              100% intercepted
+              Intercepted
             </span>
           </div>
           <p className="mt-1 text-xs text-slate-500">
             Medical claims, buzzwords & trademark issues
           </p>
           <div className="mt-3 w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
-            <div className="bg-rose-500 h-full rounded-full" style={{ width: '65%' }} />
+            <div className="bg-rose-500 h-full rounded-full" style={{ width: '100%' }} />
           </div>
         </div>
       </div>
@@ -198,10 +251,12 @@ export default function Dashboard() {
           {/* Compliance Overview Card */}
           <Card
             title="Compliance Overview & Channel Breakdown"
-            subtitle="Automated audit health index segmented by communication channel"
+            subtitle="Automated audit health index segmented by communication channel (Demo Metrics)"
             actions={
               <div className="flex items-center gap-2">
-                <span className="text-xs font-medium text-slate-500">Brand Target:</span>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                  Demo Baseline
+                </span>
                 <span className="text-xs font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-200">
                   95.0% Benchmark
                 </span>
@@ -280,7 +335,23 @@ export default function Dashboard() {
             }
           >
             <div className="divide-y divide-slate-100">
-              {recentSubmissions.map((sub) => (
+              {isLoading ? (
+                <div className="p-8 text-center">
+                  <div className="inline-block animate-spin rounded-full h-6 w-6 border-2 border-indigo-600 border-t-transparent mb-2" />
+                  <p className="text-xs text-slate-500 font-medium">Loading live submissions...</p>
+                </div>
+              ) : recentSubmissions.length === 0 ? (
+                <div className="p-8 text-center bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
+                  <p className="text-xs text-slate-500 font-medium">No live submissions yet in database.</p>
+                  <Link
+                    to="/submit"
+                    className="text-xs text-indigo-600 font-semibold hover:underline mt-1.5 inline-block"
+                  >
+                    Submit marketing copy to start live AI audits &rarr;
+                  </Link>
+                </div>
+              ) : (
+                recentSubmissions.map((sub) => (
                 <div
                   key={sub.id}
                   className="py-3.5 first:pt-0 last:pb-0 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50/70 p-2 rounded-xl transition-colors"
@@ -325,7 +396,8 @@ export default function Dashboard() {
                     </button>
                   </div>
                 </div>
-              ))}
+              ))
+            )}
             </div>
           </Card>
         </div>
@@ -341,7 +413,9 @@ export default function Dashboard() {
                 </div>
                 <div>
                   <h4 className="text-sm font-bold text-white">{BRAND_PROFILE.name}</h4>
-                  <p className="text-[11px] text-indigo-300 font-medium">Core Brand Standards</p>
+                  <p className="text-[11px] text-indigo-300 font-medium">
+                    {activeGuidelinesCount > 0 ? `${activeGuidelinesCount} Active Brand Guidelines` : 'Core Brand Standards'}
+                  </p>
                 </div>
               </div>
               <span className="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">

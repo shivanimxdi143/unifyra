@@ -9,6 +9,13 @@ const STATUS_CONFIGS = {
     border: 'border-amber-200',
     dot: 'bg-amber-500'
   },
+  analyzed: {
+    label: 'Analyzed (Ready for Review)',
+    bg: 'bg-indigo-50',
+    text: 'text-indigo-800',
+    border: 'border-indigo-200',
+    dot: 'bg-indigo-500'
+  },
   approved: {
     label: 'Approved',
     bg: 'bg-emerald-50',

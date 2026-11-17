@@ -12,46 +12,147 @@ import Card from '../components/common/Card';
 import StatusBadge from '../components/common/StatusBadge';
 import ScoreMeter from '../components/common/ScoreMeter';
 import EmptyState from '../components/common/EmptyState';
-import { getStoredSubmissions, updateReviewStatus } from '../services/contentService';
+import {
+  getStoredSubmissions,
+  getSubmissionWithFindings,
+  recordReviewDecision,
+  fetchReviewAuditTrail
+} from '../services/contentService';
+import { getErrorMessage } from '../services/api';
 import { useOutletContext } from 'react-router-dom';
 
 export default function ReviewQueue() {
   const { showToast, currentRole } = useOutletContext();
-  const [submissions, setSubmissions] = useState(() => getStoredSubmissions());
+  const [submissions, setSubmissions] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [selectedSub, setSelectedSub] = useState(null);
   const [filterStatus, setFilterStatus] = useState('pending');
   const [searchQuery, setSearchQuery] = useState('');
   const [reviewerNotes, setReviewerNotes] = useState('');
+  const [reviewHistory, setReviewHistory] = useState([]);
+  const [isSubmittingDecision, setIsSubmittingDecision] = useState(false);
 
-  const loadData = useCallback(() => {
-    const subs = getStoredSubmissions();
-    setSubmissions(subs);
-    setSelectedSub((prev) => (prev ? subs.find((s) => s.id === prev.id) || null : null));
+  const normalizeSubmission = (sub) => {
+    const findings = sub.findings || [];
+    let penalty = 0;
+    findings.forEach((f) => {
+      if (f.severity === 'critical') penalty += 24;
+      else if (f.severity === 'high') penalty += 14;
+      else if (f.severity === 'medium') penalty += 8;
+      else penalty += 4;
+    });
+    const score = Math.max(25, Math.min(100, 100 - penalty));
+
+    return {
+      _id: sub._id,
+      id: sub._id ? `SUB-${sub._id.slice(-4).toUpperCase()}` : (sub.id || 'SUB-000'),
+      title: sub.title || (sub.content ? sub.content.slice(0, 36) + '...' : 'Draft Content'),
+      channel: sub.contentType ? sub.contentType.replace(/_/g, ' ').toUpperCase() : (sub.channel || 'Social Media'),
+      department: sub.department || 'Marketing',
+      campaign: sub.campaign || 'Brand Campaign',
+      status: sub.status || 'pending',
+      content: sub.content || '',
+      submitter: {
+        name: sub.submittedBy || 'Elena Rostova',
+        role: 'Content Creator',
+        avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80'
+      },
+      findings: findings.map((f, idx) => ({
+        id: f._id || `f-${idx}`,
+        ruleId: f.ruleId ? String(f.ruleId).slice(-6) : 'BRAND',
+        severity: f.severity || 'medium',
+        offendingText: f.offendingText || '',
+        explanation: f.explanation || '',
+        suggestion: f.suggestedCorrection || f.suggestion || ''
+      })),
+      score,
+      submittedAt: sub.createdAt || sub.submittedAt || new Date().toISOString()
+    };
+  };
+
+  const loadData = useCallback(async () => {
+    try {
+      const subs = await getStoredSubmissions();
+      setError(null);
+      const normalized = (subs || []).map(normalizeSubmission);
+      setSubmissions(normalized);
+
+      // Re-sync selectedSub if open
+      setSelectedSub((prev) => {
+        if (!prev) return null;
+        return normalized.find((s) => s._id === prev._id) || null;
+      });
+    } catch (err) {
+      setError(getErrorMessage(err));
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
   useEffect(() => {
-    window.addEventListener('unifyra-data-updated', loadData);
-    return () => window.removeEventListener('unifyra-data-updated', loadData);
+    let isMounted = true;
+    Promise.resolve().then(() => {
+      if (isMounted) loadData();
+    });
+
+    const handleUpdate = () => {
+      if (isMounted) loadData();
+    };
+
+    window.addEventListener('unifyra-data-updated', handleUpdate);
+    return () => {
+      isMounted = false;
+      window.removeEventListener('unifyra-data-updated', handleUpdate);
+    };
   }, [loadData]);
 
-  const handleOpenReview = (sub) => {
-    setSelectedSub(sub);
-    setReviewerNotes(sub.reviewerNotes || '');
+  const handleOpenReview = async (sub) => {
+    try {
+      // Fetch full details with attached findings from backend
+      const fullSub = await getSubmissionWithFindings(sub._id);
+      const normalized = normalizeSubmission(fullSub);
+      setSelectedSub(normalized);
+      setReviewerNotes('');
+
+      // Fetch review audit trail
+      const history = await fetchReviewAuditTrail(sub._id);
+      setReviewHistory(history);
+    } catch {
+      setSelectedSub(sub);
+    }
   };
 
-  const handleDecision = (newStatus) => {
+  const handleDecision = async (newStatus) => {
     if (!selectedSub) return;
 
-    updateReviewStatus(selectedSub.id, newStatus, reviewerNotes);
-    showToast(`Submission ${selectedSub.id} marked as "${newStatus.replace('_', ' ').toUpperCase()}".`);
-    window.dispatchEvent(new Event('unifyra-data-updated'));
-    loadData();
+    setIsSubmittingDecision(true);
+    try {
+      await recordReviewDecision(selectedSub._id, {
+        reviewerId: currentRole || 'Certified Brand Reviewer',
+        decision: newStatus,
+        comments: reviewerNotes.trim() || `Decision: ${newStatus.replace('_', ' ')}`
+      });
+
+      showToast(`Submission #${selectedSub._id.slice(-6)} marked as "${newStatus.replace('_', ' ').toUpperCase()}".`);
+      window.dispatchEvent(new Event('unifyra-data-updated'));
+      await loadData();
+
+      // Refresh review history
+      const history = await fetchReviewAuditTrail(selectedSub._id);
+      setReviewHistory(history);
+      setReviewerNotes('');
+    } catch (err) {
+      showToast(`Review decision error: ${getErrorMessage(err)}`);
+    } finally {
+      setIsSubmittingDecision(false);
+    }
   };
 
   const filteredSubmissions = submissions.filter((sub) => {
     const matchesStatus =
       filterStatus === 'all' ||
-      (filterStatus === 'pending' && sub.status === 'pending') ||
+      (filterStatus === 'pending' && (sub.status === 'analyzed' || sub.status === 'pending')) ||
       (filterStatus === 'changes_requested' && sub.status === 'changes_requested') ||
       (filterStatus === 'completed' && (sub.status === 'approved' || sub.status === 'rejected'));
 
@@ -65,7 +166,7 @@ export default function ReviewQueue() {
     return matchesStatus && matchesQuery;
   });
 
-  const pendingCount = submissions.filter((s) => s.status === 'pending').length;
+  const pendingCount = submissions.filter((s) => s.status === 'analyzed' || s.status === 'pending').length;
 
   return (
     <div className="space-y-6">
@@ -147,7 +248,17 @@ export default function ReviewQueue() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Queue List (5 cols on lg) */}
         <div className="lg:col-span-5 space-y-3">
-          {filteredSubmissions.length === 0 ? (
+          {isLoading ? (
+            <div className="bg-white rounded-2xl border border-slate-200/90 p-8 text-center shadow-2xs">
+              <div className="inline-block animate-spin rounded-full h-7 w-7 border-4 border-indigo-600 border-t-transparent mb-2" />
+              <p className="text-xs text-slate-500 font-medium">Loading review queue...</p>
+            </div>
+          ) : error ? (
+            <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4 text-center text-xs text-rose-800 shadow-2xs">
+              <p className="font-bold mb-1">Failed to load review queue</p>
+              <p>{error}</p>
+            </div>
+          ) : filteredSubmissions.length === 0 ? (
             <EmptyState
               icon={ClipboardCheck}
               title="Queue is currently clear"
@@ -278,6 +389,29 @@ export default function ReviewQueue() {
                   )}
                 </div>
 
+                {/* Historical Review Audit Trail */}
+                {reviewHistory && reviewHistory.length > 0 && (
+                  <div>
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-800 mb-2">
+                      Review Audit History ({reviewHistory.length})
+                    </h4>
+                    <div className="space-y-2 max-h-48 overflow-y-auto">
+                      {reviewHistory.map((r, rIdx) => (
+                        <div key={r._id || rIdx} className="p-2.5 rounded-xl border border-slate-200 bg-slate-50/70 text-xs">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="font-semibold text-slate-800">{r.reviewerId}</span>
+                            <StatusBadge status={r.decision} size="sm" />
+                          </div>
+                          <p className="text-slate-600 text-[11px]">{r.comments}</p>
+                          <span className="text-[10px] text-slate-400 mt-1 block">
+                            {new Date(r.createdAt).toLocaleString()}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {/* Reviewer Notes Input */}
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
@@ -301,8 +435,9 @@ export default function ReviewQueue() {
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
+                      disabled={isSubmittingDecision}
                       onClick={() => handleDecision('rejected')}
-                      className="px-3 py-2 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-800 font-semibold text-xs transition-colors flex items-center gap-1.5 cursor-pointer"
+                      className="px-3 py-2 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 disabled:opacity-50 text-rose-800 font-semibold text-xs transition-colors flex items-center gap-1.5 cursor-pointer"
                     >
                       <XCircle className="w-3.5 h-3.5" />
                       <span>Reject</span>
@@ -310,8 +445,9 @@ export default function ReviewQueue() {
 
                     <button
                       type="button"
+                      disabled={isSubmittingDecision}
                       onClick={() => handleDecision('changes_requested')}
-                      className="px-3.5 py-2 rounded-xl border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-900 font-semibold text-xs transition-colors flex items-center gap-1.5 cursor-pointer"
+                      className="px-3.5 py-2 rounded-xl border border-amber-300 bg-amber-50 hover:bg-amber-100 disabled:opacity-50 text-amber-900 font-semibold text-xs transition-colors flex items-center gap-1.5 cursor-pointer"
                     >
                       <AlertTriangle className="w-3.5 h-3.5" />
                       <span>Request Changes</span>
@@ -319,11 +455,12 @@ export default function ReviewQueue() {
 
                     <button
                       type="button"
+                      disabled={isSubmittingDecision}
                       onClick={() => handleDecision('approved')}
-                      className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs transition-colors shadow-sm shadow-emerald-950/20 flex items-center gap-1.5 cursor-pointer"
+                      className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-semibold text-xs transition-colors shadow-sm shadow-emerald-950/20 flex items-center gap-1.5 cursor-pointer"
                     >
                       <CheckCircle2 className="w-4 h-4" />
-                      <span>Approve Content</span>
+                      <span>{isSubmittingDecision ? 'Submitting...' : 'Approve Content'}</span>
                     </button>
                   </div>
                 </div>

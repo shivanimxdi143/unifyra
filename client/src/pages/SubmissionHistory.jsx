@@ -11,39 +11,119 @@ import StatusBadge from '../components/common/StatusBadge';
 import ScoreMeter from '../components/common/ScoreMeter';
 import Modal from '../components/common/Modal';
 import EmptyState from '../components/common/EmptyState';
-import { getStoredSubmissions } from '../services/contentService';
+import {
+  getStoredSubmissions,
+  getSubmissionWithFindings,
+  fetchReviewAuditTrail
+} from '../services/contentService';
+import { getErrorMessage } from '../services/api';
 import { useOutletContext } from 'react-router-dom';
 
 export default function SubmissionHistory() {
   const { showToast } = useOutletContext();
-  const [submissions, setSubmissions] = useState(() => getStoredSubmissions());
+  const [submissions, setSubmissions] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('All');
   const [selectedChannel, setSelectedChannel] = useState('All');
   const [selectedSubmission, setSelectedSubmission] = useState(null);
+  const [selectedHistory, setSelectedHistory] = useState([]);
   const [sortField, setSortField] = useState('submittedAt');
   const [sortOrder, setSortOrder] = useState('desc');
 
-  const loadData = useCallback(() => {
-    setSubmissions(getStoredSubmissions());
+  const normalizeSubmission = (sub) => {
+    const findings = sub.findings || [];
+    let penalty = 0;
+    findings.forEach((f) => {
+      if (f.severity === 'critical') penalty += 24;
+      else if (f.severity === 'high') penalty += 14;
+      else if (f.severity === 'medium') penalty += 8;
+      else penalty += 4;
+    });
+    const score = Math.max(25, Math.min(100, 100 - penalty));
+
+    return {
+      _id: sub._id,
+      id: sub._id ? `SUB-${sub._id.slice(-4).toUpperCase()}` : (sub.id || 'SUB-000'),
+      title: sub.title || (sub.content ? sub.content.slice(0, 36) + '...' : 'Draft Marketing Copy'),
+      channel: sub.contentType ? sub.contentType.replace(/_/g, ' ').toUpperCase() : (sub.channel || 'Social Media'),
+      status: sub.status || 'pending',
+      content: sub.content || '',
+      campaign: sub.campaign || 'Brand Campaign',
+      submitter: {
+        name: sub.submittedBy || 'Elena Rostova',
+        role: 'Content Creator',
+        avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80'
+      },
+      score,
+      findingsCount: findings.length,
+      findings: findings.map((f, idx) => ({
+        id: f._id || `f-${idx}`,
+        ruleId: f.ruleId ? String(f.ruleId).slice(-6) : 'BRAND',
+        severity: f.severity || 'medium',
+        offendingText: f.offendingText || '',
+        explanation: f.explanation || '',
+        suggestion: f.suggestedCorrection || f.suggestion || ''
+      })),
+      submittedAt: sub.createdAt || sub.submittedAt || new Date().toISOString()
+    };
+  };
+
+  const loadData = useCallback(async () => {
+    try {
+      const data = await getStoredSubmissions();
+      setError(null);
+      setSubmissions((data || []).map(normalizeSubmission));
+    } catch (err) {
+      setError(getErrorMessage(err));
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
   useEffect(() => {
-    window.addEventListener('unifyra-data-updated', loadData);
-    return () => window.removeEventListener('unifyra-data-updated', loadData);
+    let isMounted = true;
+    Promise.resolve().then(() => {
+      if (isMounted) loadData();
+    });
+
+    const handleUpdate = () => {
+      if (isMounted) loadData();
+    };
+
+    window.addEventListener('unifyra-data-updated', handleUpdate);
+    return () => {
+      isMounted = false;
+      window.removeEventListener('unifyra-data-updated', handleUpdate);
+    };
   }, [loadData]);
+
+  const handleInspect = async (sub) => {
+    setSelectedSubmission(sub);
+    setSelectedHistory([]);
+    try {
+      const fullSub = await getSubmissionWithFindings(sub._id);
+      setSelectedSubmission(normalizeSubmission(fullSub));
+      const history = await fetchReviewAuditTrail(sub._id);
+      setSelectedHistory(history);
+    } catch {
+      // Keep initial sub details
+    }
+  };
 
   const channels = [
     'All',
-    'Social - Instagram',
-    'Social - TikTok',
-    'Email Newsletter',
-    'In-Store Signage',
-    'Digital Ads',
-    'Press Release'
+    'SOCIAL POST',
+    'EMAIL',
+    'AD COPY',
+    'BLOG POST',
+    'WEBSITE COPY',
+    'PRESS RELEASE',
+    'OTHER'
   ];
 
-  const statuses = ['All', 'approved', 'pending', 'changes_requested', 'rejected'];
+  const statuses = ['All', 'approved', 'analyzed', 'pending', 'changes_requested', 'rejected'];
 
   const filteredSubmissions = submissions
     .filter((sub) => {
@@ -159,7 +239,17 @@ export default function SubmissionHistory() {
 
       {/* Table Container */}
       <div className="bg-white rounded-2xl border border-slate-200/90 shadow-2xs overflow-hidden">
-        {filteredSubmissions.length === 0 ? (
+        {isLoading ? (
+          <div className="p-12 text-center">
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-indigo-600 border-t-transparent mb-3" />
+            <p className="text-xs text-slate-500 font-semibold">Loading submission history from backend...</p>
+          </div>
+        ) : error ? (
+          <div className="p-6 text-center text-xs text-rose-800 bg-rose-50 border-b border-rose-200">
+            <p className="font-bold mb-1">Failed to load submissions</p>
+            <p>{error}</p>
+          </div>
+        ) : filteredSubmissions.length === 0 ? (
           <EmptyState
             icon={History}
             title="No records found"
@@ -213,7 +303,7 @@ export default function SubmissionHistory() {
                           {sub.id}
                         </span>
                         <span
-                          onClick={() => setSelectedSubmission(sub)}
+                          onClick={() => handleInspect(sub)}
                           className="font-bold text-slate-900 hover:text-indigo-600 cursor-pointer"
                         >
                           {sub.title}
@@ -253,7 +343,7 @@ export default function SubmissionHistory() {
 
                     <td className="py-3.5 px-4 text-right whitespace-nowrap">
                       <button
-                        onClick={() => setSelectedSubmission(sub)}
+                        onClick={() => handleInspect(sub)}
                         className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold text-xs transition-colors cursor-pointer"
                       >
                         <Eye className="w-3.5 h-3.5" />
@@ -289,7 +379,7 @@ export default function SubmissionHistory() {
               <div className="flex items-center gap-3">
                 <StatusBadge status={selectedSubmission.status} />
                 <span className="text-xs text-slate-500">
-                  By {selectedSubmission.submitter.name} ({selectedSubmission.submitter.role})
+                  By {selectedSubmission.submitter.name}
                 </span>
               </div>
               <ScoreMeter score={selectedSubmission.score} />
@@ -309,7 +399,7 @@ export default function SubmissionHistory() {
                 <h4 className="text-xs font-bold uppercase tracking-wider text-rose-800 mb-2">
                   Compliance Violations Logged ({selectedSubmission.findings.length})
                 </h4>
-                <div className="space-y-2">
+                <div className="space-y-2 max-h-48 overflow-y-auto">
                   {selectedSubmission.findings.map((f, i) => (
                     <div key={i} className="p-3 rounded-xl bg-rose-50/50 border border-rose-200 text-xs space-y-1">
                       <div className="flex items-center justify-between">
@@ -328,10 +418,26 @@ export default function SubmissionHistory() {
               </div>
             )}
 
-            {selectedSubmission.reviewerNotes && (
-              <div className="p-3.5 rounded-xl bg-amber-50/70 border border-amber-200 text-xs">
-                <span className="font-bold text-amber-900 block mb-0.5">Reviewer Notes:</span>
-                <p className="text-amber-950">{selectedSubmission.reviewerNotes}</p>
+            {/* Review Decision Audit Trail */}
+            {selectedHistory && selectedHistory.length > 0 && (
+              <div>
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-700 mb-2">
+                  Human Review Decisions ({selectedHistory.length})
+                </h4>
+                <div className="space-y-2 max-h-40 overflow-y-auto">
+                  {selectedHistory.map((rev, idx) => (
+                    <div key={rev._id || idx} className="p-3 rounded-xl bg-amber-50/60 border border-amber-200/80 text-xs space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="font-bold text-amber-950">{rev.reviewerId}</span>
+                        <StatusBadge status={rev.decision} size="sm" />
+                      </div>
+                      <p className="text-slate-700">{rev.comments}</p>
+                      <span className="text-[10px] text-slate-400 block">
+                        {new Date(rev.createdAt).toLocaleString()}
+                      </span>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>
