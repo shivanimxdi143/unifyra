@@ -162,23 +162,47 @@ export default function SubmissionHistory() {
     setIsResubmitting(true);
     setResubmitSuccessMsg(null);
     try {
-      await resubmitSubmission(resubmittingSub._id, {
+      // 1. Resubmit amended content via HTTP PUT API request
+      const resubmitData = await resubmitSubmission(resubmittingSub._id, {
         content: resubmitContentText.trim(),
         contentType: resubmitContentType
       });
-      setResubmitSuccessMsg(`Submission ${resubmittingSub.id} resubmitted successfully. Status reset to PENDING and previous findings cleared.`);
-      showToast(`Submission ${resubmittingSub.id} resubmitted (status: pending).`);
+
+      // 2. Ensure fresh AI analysis is run and latest findings are captured
+      let finalStatus = resubmitData.status || 'analyzed';
+      let finalScore = resubmitData.complianceScore;
+      let finalFindings = resubmitData.findings || [];
+
+      if (finalStatus !== 'analyzed') {
+        const analysisRes = await analyzeSubmission(resubmittingSub._id);
+        const data = analysisRes.data;
+        finalStatus = 'analyzed';
+        finalScore = data.complianceScore;
+        finalFindings = data.findings || [];
+      }
+
+      setResubmitSuccessMsg(
+        `Submission ${resubmittingSub.id} revised and analyzed successfully (Compliance Score: ${finalScore}%). Status updated to ANALYZED for reviewer approval.`
+      );
+      showToast(`Submission ${resubmittingSub.id} resubmitted and analyzed (Score: ${finalScore}%).`);
       window.dispatchEvent(new Event('unifyra-data-updated'));
       await loadData();
       setResubmittingSub((prev) => ({
         ...prev,
-        status: 'pending',
+        status: 'analyzed',
         content: resubmitContentText.trim(),
         contentType: resubmitContentType,
-        findings: [],
-        findingsCount: 0,
-        score: null,
-        complianceScore: null
+        findings: (finalFindings || []).map((f, idx) => ({
+          id: f._id || `f-${idx}`,
+          ruleId: f.ruleId ? String(f.ruleId).slice(-6) : 'BRAND',
+          severity: f.severity || 'medium',
+          offendingText: f.offendingText || '',
+          explanation: f.explanation || '',
+          suggestion: f.suggestedCorrection || f.suggestion || ''
+        })),
+        findingsCount: (finalFindings || []).length,
+        score: finalScore,
+        complianceScore: finalScore
       }));
     } catch (err) {
       showToast(`Resubmission failed: ${getErrorMessage(err)}`);
@@ -609,7 +633,7 @@ export default function SubmissionHistory() {
           isOpen={!!resubmittingSub}
           onClose={() => setResubmittingSub(null)}
           title={`Edit & Resubmit: ${resubmittingSub.id}`}
-          subtitle={`Preserves original ID (${resubmittingSub.id}) and human review history • Status resets to PENDING`}
+          subtitle={`Preserves original ID (${resubmittingSub.id}) and human review history • Ready for fresh AI analysis`}
           footer={
             <div className="flex flex-wrap items-center justify-between gap-2 w-full">
               <button
@@ -637,7 +661,7 @@ export default function SubmissionHistory() {
                   className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white font-semibold text-xs transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
                 >
                   <RotateCcw className={`w-3.5 h-3.5 ${isResubmitting ? 'animate-spin' : ''}`} />
-                  <span>{isResubmitting ? 'Resubmitting...' : '1. Save & Resubmit (PUT API)'}</span>
+                  <span>{isResubmitting ? 'Resubmitting...' : 'Save & Resubmit'}</span>
                 </button>
 
                 <button
@@ -647,7 +671,7 @@ export default function SubmissionHistory() {
                   className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-semibold text-xs transition-colors flex items-center gap-1.5 cursor-pointer shadow-xs"
                 >
                   <Sparkles className={`w-3.5 h-3.5 ${isReauditing ? 'animate-spin' : ''}`} />
-                  <span>{isReauditing ? 'Running AI Audit...' : '2. Run Fresh Gemini Audit'}</span>
+                  <span>{isReauditing ? 'Running AI Audit...' : 'Re-run AI Audit'}</span>
                 </button>
               </div>
             </div>

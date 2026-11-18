@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
-const { Submission, Finding } = require('../models');
+const { Submission, Finding, Guideline } = require('../models');
+const { analyzeContentWithGemini } = require('../services/geminiService');
 
 /**
  * @route   POST /api/submissions
@@ -284,22 +285,72 @@ const resubmitContent = async (req, res, next) => {
       });
     }
 
-    // Update content and reset status to pending (clear previous compliance score)
+    // Update content
     submission.content = content.trim();
     if (contentType) {
       submission.contentType = contentType.trim().toLowerCase();
     }
-    submission.status = 'pending';
-    submission.complianceScore = null;
-    await submission.save();
 
     // Clear old findings to prevent duplicates upon re-analysis (review history in Review collection is retained)
     await Finding.deleteMany({ submissionId: submission._id });
 
+    // Fetch applicable guidelines to perform AI brand compliance analysis on revised content
+    const guidelines = await Guideline.find({});
+    let savedFindings = [];
+    let calculatedScore = 100;
+
+    if (guidelines && guidelines.length > 0) {
+      try {
+        const validatedFindings = await analyzeContentWithGemini({
+          content: submission.content,
+          contentType: submission.contentType,
+          guidelines
+        });
+
+        if (validatedFindings.length > 0) {
+          const findingsToInsert = validatedFindings.map(f => ({
+            submissionId: submission._id,
+            ruleId: f.ruleId || null,
+            severity: f.severity,
+            offendingText: f.offendingText,
+            explanation: f.explanation,
+            suggestedCorrection: f.suggestedCorrection || ''
+          }));
+          savedFindings = await Finding.insertMany(findingsToInsert);
+        }
+
+        // Compute deterministic compliance score
+        let penalty = 0;
+        savedFindings.forEach(f => {
+          if (f.severity === 'critical') penalty += 24;
+          else if (f.severity === 'high') penalty += 14;
+          else if (f.severity === 'medium') penalty += 8;
+          else penalty += 4;
+        });
+        calculatedScore = Math.max(25, Math.min(100, 100 - penalty));
+
+        // After successful AI analysis, set status to 'analyzed' so reviewer can take action
+        submission.status = 'analyzed';
+        submission.complianceScore = calculatedScore;
+      } catch (aiErr) {
+        // Fall back to pending if AI analysis fails temporarily
+        submission.status = 'pending';
+        submission.complianceScore = null;
+      }
+    } else {
+      submission.status = 'pending';
+      submission.complianceScore = null;
+    }
+
+    await submission.save();
+
     res.status(200).json({
       success: true,
-      message: 'Submission updated and reset to pending for re-analysis',
-      data: submission
+      message: 'Submission revised and analyzed successfully',
+      data: {
+        ...submission.toObject(),
+        findings: savedFindings
+      }
     });
   } catch (error) {
     if (error.name === 'ValidationError') {
