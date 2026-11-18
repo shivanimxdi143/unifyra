@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Sparkles,
   CheckCircle2,
@@ -18,11 +18,12 @@ import {
   ensureDefaultGuidelines
 } from '../services/contentService';
 import { getErrorMessage } from '../services/api';
-import { useOutletContext, useNavigate } from 'react-router-dom';
+import { useOutletContext, useNavigate, useLocation } from 'react-router-dom';
 
 export default function SubmitContent() {
   const { showToast } = useOutletContext();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [title, setTitle] = useState('');
   const [contentType, setContentType] = useState('social_post');
@@ -36,6 +37,24 @@ export default function SubmitContent() {
   const [auditResult, setAuditResult] = useState(null);
   const [appliedCorrections, setAppliedCorrections] = useState({});
   const [auditError, setAuditError] = useState(null);
+
+  // Handle incoming resubmission request from SubmissionHistory
+  useEffect(() => {
+    if (location.state?.resubmitSubmission) {
+      const target = location.state.resubmitSubmission;
+      Promise.resolve().then(() => {
+        setCurrentSubmission({
+          _id: target._id,
+          id: target.id,
+          status: target.status
+        });
+        if (target.content) setContent(target.content);
+        if (target.contentType) setContentType(target.contentType);
+        if (target.title) setTitle(target.title);
+        showToast(`Loaded ${target.id || 'submission'} for resubmission. Update content and run fresh audit.`);
+      });
+    }
+  }, [location.state, showToast]);
 
   const contentTypes = [
     { value: 'social_post', label: 'Social Post (Instagram, TikTok, LinkedIn)' },
@@ -195,11 +214,11 @@ export default function SubmitContent() {
     <div className="space-y-6">
       <PageHeader
         title="Submit Content for AI Audit"
-        subtitle={`Validate marketing and corporate copy against FreshBite brand guidelines, legal claims restrictions, and trademark standards before publication.`}
+        subtitle={`Validate draft marketing copy against FreshBite brand guidelines, claims rules, and trademark standards before release.`}
         badge={
           <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200 flex items-center gap-1">
             <Sparkles className="w-3 h-3 text-indigo-600" />
-            AI Governance Engine
+            AI Audit Engine
           </span>
         }
       />
@@ -210,11 +229,11 @@ export default function SubmitContent() {
           <div className="flex items-center gap-2">
             <Wand2 className="w-4 h-4 text-indigo-700" />
             <h3 className="text-xs font-bold uppercase tracking-wider text-indigo-950">
-              Interactive Test Presets (Instant Demo)
+              Try a Sample (Instant Demo)
             </h3>
           </div>
           <span className="text-[11px] text-slate-500 font-medium">
-            Click any test copy below to instantly test the compliance engine:
+            Select any sample copy below to immediately test the AI compliance audit:
           </span>
         </div>
 
@@ -246,8 +265,8 @@ export default function SubmitContent() {
         {/* Left Column: Form & Editor (7 cols) */}
         <div className="lg:col-span-7 space-y-5">
           <Card
-            title="Draft Content & Metadata"
-            subtitle="Specify campaign context and input content text for scanning"
+            title="Draft Content"
+            subtitle="Enter your draft copy and select the communication channel"
           >
             <div className="space-y-4">
               <div>
@@ -358,7 +377,7 @@ export default function SubmitContent() {
                       className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs shadow-md transition-all cursor-pointer"
                     >
                       <Send className="w-4 h-4" />
-                      <span>Submit for Review</span>
+                      <span>Send to Review Queue</span>
                     </button>
                   )}
                 </div>

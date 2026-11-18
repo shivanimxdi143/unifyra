@@ -15,11 +15,40 @@ const app = express();
 // Security HTTP headers
 app.use(helmet());
 
-// CORS configuration
+// CORS configuration supporting single origin, comma-separated origins, and Vercel preview domains
+const allowedOrigins = (process.env.CLIENT_URL || '*')
+  .split(',')
+  .map(o => o.trim())
+  .filter(Boolean);
+
 const corsOptions = {
-  origin: process.env.CLIENT_URL || '*',
+  origin: (origin, callback) => {
+    // Allow non-browser requests (e.g. mobile apps, health checks, curl, Postman)
+    if (!origin) return callback(null, true);
+
+    // If wildcard allowed, allow all
+    if (allowedOrigins.includes('*')) {
+      return callback(null, true);
+    }
+
+    // Check exact origin or Vercel preview domain (*.vercel.app)
+    const isAllowed = allowedOrigins.some(allowed => {
+      if (allowed === origin) return true;
+      if (allowed.includes('vercel.app') && origin.endsWith('.vercel.app')) {
+        return true;
+      }
+      return false;
+    });
+
+    if (isAllowed) {
+      return callback(null, true);
+    } else {
+      callback(new Error(`CORS blocked for origin: ${origin}`));
+    }
+  },
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true
 };
 app.use(cors(corsOptions));
 

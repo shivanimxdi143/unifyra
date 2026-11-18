@@ -74,8 +74,19 @@ const analyzeSubmission = async (req, res, next) => {
       savedFindings = await Finding.insertMany(findingsToInsert);
     }
 
-    // 7. Update submission status to 'analyzed' (never auto-approve)
+    // 7. Compute deterministic compliance score based on severity weights
+    let penalty = 0;
+    savedFindings.forEach(f => {
+      if (f.severity === 'critical') penalty += 24;
+      else if (f.severity === 'high') penalty += 14;
+      else if (f.severity === 'medium') penalty += 8;
+      else penalty += 4;
+    });
+    const calculatedScore = Math.max(25, Math.min(100, 100 - penalty));
+
+    // 8. Update submission status to 'analyzed' and save complianceScore (never auto-approve)
     submission.status = 'analyzed';
+    submission.complianceScore = calculatedScore;
     await submission.save();
 
     res.status(200).json({
@@ -84,6 +95,7 @@ const analyzeSubmission = async (req, res, next) => {
       data: {
         submissionId: submission._id,
         status: submission.status,
+        complianceScore: calculatedScore,
         findingsCount: savedFindings.length,
         findings: savedFindings
       }

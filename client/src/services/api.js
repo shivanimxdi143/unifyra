@@ -81,7 +81,7 @@ export const createSubmission = async (data) => {
 };
 
 export const resubmitContent = async (id, data) => {
-  const response = await api.put(`/submissions/${id}`, data);
+  const response = await api.put(`/submissions/${id}/resubmit`, data);
   return response.data; // { success: true, message, data: {...} }
 };
 

@@ -42,6 +42,12 @@ const submissionSchema = new mongoose.Schema(
         message: '{VALUE} is not a valid submission status'
       },
       default: 'pending'
+    },
+    complianceScore: {
+      type: Number,
+      min: 0,
+      max: 100,
+      default: null
     }
   },
   {

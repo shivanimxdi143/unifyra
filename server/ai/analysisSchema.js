@@ -44,8 +44,11 @@ const validateFindings = (findings, availableRuleIds = []) => {
 
     // Validate or match ruleId
     let ruleId = null;
-    if (f.ruleId && availableRuleIds.some(id => id.toString() === f.ruleId.toString())) {
-      ruleId = f.ruleId;
+    if (f.ruleId) {
+      const cleanRuleId = f.ruleId.toString().replace(/\[Rule ID:\s*|\s*\]/gi, '').trim();
+      if (availableRuleIds.some(id => id.toString() === cleanRuleId)) {
+        ruleId = cleanRuleId;
+      }
     }
 
     return {

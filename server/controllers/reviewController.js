@@ -122,11 +122,26 @@ const getPendingReviews = async (req, res, next) => {
       findingsMap[key].push(f);
     });
 
-    const enrichedSubmissions = submissions.map(s => ({
-      ...s.toObject(),
-      findingsCount: (findingsMap[s._id.toString()] || []).length,
-      findings: findingsMap[s._id.toString()] || []
-    }));
+    const enrichedSubmissions = submissions.map(s => {
+      const subFindings = findingsMap[s._id.toString()] || [];
+      let score = s.complianceScore;
+      if (score === null || score === undefined) {
+        let penalty = 0;
+        subFindings.forEach(f => {
+          if (f.severity === 'critical') penalty += 24;
+          else if (f.severity === 'high') penalty += 14;
+          else if (f.severity === 'medium') penalty += 8;
+          else penalty += 4;
+        });
+        score = Math.max(25, Math.min(100, 100 - penalty));
+      }
+      return {
+        ...s.toObject(),
+        complianceScore: score,
+        findingsCount: subFindings.length,
+        findings: subFindings
+      };
+    });
 
     res.status(200).json({
       success: true,

@@ -34,14 +34,21 @@ export default function Dashboard() {
 
   const normalizeSubmission = (sub) => {
     const findings = sub.findings || [];
-    let penalty = 0;
-    findings.forEach((f) => {
-      if (f.severity === 'critical') penalty += 24;
-      else if (f.severity === 'high') penalty += 14;
-      else if (f.severity === 'medium') penalty += 8;
-      else penalty += 4;
-    });
-    const score = Math.max(25, Math.min(100, 100 - penalty));
+    let score = sub.complianceScore;
+    if (score === null || score === undefined) {
+      if (sub.status === 'pending') {
+        score = null;
+      } else {
+        let penalty = 0;
+        findings.forEach((f) => {
+          if (f.severity === 'critical') penalty += 24;
+          else if (f.severity === 'high') penalty += 14;
+          else if (f.severity === 'medium') penalty += 8;
+          else penalty += 4;
+        });
+        score = Math.max(25, Math.min(100, 100 - penalty));
+      }
+    }
 
     return {
       _id: sub._id,
@@ -114,10 +121,10 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-6">
-      {/* Page Header with subtle purple/blue styling */}
+      {/* Page Header */}
       <PageHeader
-        title="Brand Governance & Intelligence"
-        subtitle={`Real-time brand compliance monitoring, automated AI audits, and editorial governance for ${BRAND_PROFILE.name}.`}
+        title="Brand Compliance Dashboard"
+        subtitle={`Monitor content quality, check live AI audit results, and track approvals for ${BRAND_PROFILE.name}.`}
         badge={
           <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">
             <span className="h-2 w-2 rounded-full bg-indigo-500 animate-pulse" />
@@ -130,7 +137,7 @@ export default function Dashboard() {
             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs transition-all shadow-sm shadow-indigo-950/20 cursor-pointer"
           >
             <PenTool className="w-4 h-4" />
-            <span>Submit for AI Audit</span>
+            <span>New Submission</span>
           </Link>
         }
       />
@@ -152,11 +159,11 @@ export default function Dashboard() {
               {totalSubmissionsCount}
             </span>
             <span className="text-xs font-semibold text-emerald-600 flex items-center">
-              Real-Time
+              Live
             </span>
           </div>
           <p className="mt-1 text-xs text-slate-500">
-            Across social, newsletters & ad channels
+            Social posts, newsletters & ad copy
           </p>
           <div className="mt-3 w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
             <div className="bg-indigo-500 h-full rounded-full" style={{ width: `${Math.min(100, (totalSubmissionsCount || 1) * 20)}%` }} />
@@ -182,7 +189,7 @@ export default function Dashboard() {
             </span>
           </div>
           <p className="mt-1 text-xs text-slate-500">
-            Awaiting human editorial verification
+            Awaiting editorial sign-off
           </p>
           <div className="mt-3 flex items-center justify-between text-xs text-slate-600">
             <Link to="/review" className="text-indigo-600 hover:text-indigo-800 font-semibold flex items-center gap-1">
@@ -195,7 +202,7 @@ export default function Dashboard() {
         <div className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-2xs relative overflow-hidden group hover:border-emerald-300 transition-all">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-              Approved Content
+              Approved
             </span>
             <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
               <CheckCircle2 className="w-4 h-4" />
@@ -206,11 +213,11 @@ export default function Dashboard() {
               {approvedSubmissions.length}
             </span>
             <span className="text-xs font-semibold text-emerald-600">
-              Certified
+              Verified
             </span>
           </div>
           <p className="mt-1 text-xs text-slate-500">
-            Approved by human reviewers for release
+            Cleared for public distribution
           </p>
           <div className="mt-3 w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
             <div className="bg-emerald-500 h-full rounded-full" style={{ width: `${Math.min(100, (approvedSubmissions.length || 1) * 25)}%` }} />
@@ -221,7 +228,7 @@ export default function Dashboard() {
         <div className="bg-white rounded-2xl border border-slate-200/90 p-5 shadow-2xs relative overflow-hidden group hover:border-rose-300 transition-all">
           <div className="flex items-center justify-between">
             <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">
-              Violations Flagged
+              Flagged by AI
             </span>
             <div className="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center">
               <AlertOctagon className="w-4 h-4" />
@@ -232,7 +239,7 @@ export default function Dashboard() {
               {totalViolationsDetected}
             </span>
             <span className="text-xs font-semibold text-rose-600">
-              Intercepted
+              Violations
             </span>
           </div>
           <p className="mt-1 text-xs text-slate-500">
@@ -250,14 +257,11 @@ export default function Dashboard() {
         <div className="lg:col-span-2 space-y-6">
           {/* Compliance Overview Card */}
           <Card
-            title="Compliance Overview & Channel Breakdown"
-            subtitle="Automated audit health index segmented by communication channel (Demo Metrics)"
+            title="Compliance by Channel"
+            subtitle="Audit pass rates across communication channels"
             actions={
               <div className="flex items-center gap-2">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
-                  Demo Baseline
-                </span>
-                <span className="text-xs font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-200">
+                <span className="text-xs font-bold text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-full border border-indigo-200">
                   95.0% Benchmark
                 </span>
               </div>
@@ -323,13 +327,13 @@ export default function Dashboard() {
           {/* Recent Submissions List */}
           <Card
             title="Recent Submissions"
-            subtitle="Latest content assets submitted for AI brand audit and human verification"
+            subtitle="Latest content assets and their AI audit status"
             actions={
               <Link
                 to="/history"
                 className="text-xs font-semibold text-indigo-600 hover:text-indigo-800 flex items-center gap-1"
               >
-                <span>Full History</span>
+                <span>View All</span>
                 <ArrowRight className="w-3 h-3" />
               </Link>
             }
@@ -342,12 +346,12 @@ export default function Dashboard() {
                 </div>
               ) : recentSubmissions.length === 0 ? (
                 <div className="p-8 text-center bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
-                  <p className="text-xs text-slate-500 font-medium">No live submissions yet in database.</p>
+                  <p className="text-xs text-slate-500 font-medium">No submissions yet.</p>
                   <Link
                     to="/submit"
                     className="text-xs text-indigo-600 font-semibold hover:underline mt-1.5 inline-block"
                   >
-                    Submit marketing copy to start live AI audits &rarr;
+                    Submit draft copy to start your first audit &rarr;
                   </Link>
                 </div>
               ) : (

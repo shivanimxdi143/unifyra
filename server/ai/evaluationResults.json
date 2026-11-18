@@ -1,0 +1,640 @@
+{
+  "summary": {
+    "total": 18,
+    "executed": 18,
+    "passed": 14,
+    "partial": 4,
+    "failed": 0,
+    "notRun": 0,
+    "criticalMissedCount": 0,
+    "avgPrecision": 0.86,
+    "avgRecall": 1,
+    "avgLatencyMs": 3085
+  },
+  "results": [
+    {
+      "id": "TC-001",
+      "title": "Severe Unsubstantiated Medical & Detox Claim",
+      "category": "clear_violation",
+      "contentType": "social_post",
+      "content": "Feeling sluggish? Our new Green Glow Elixir™ cures chronic digestive inflammation and eliminates all toxins from your liver in 24 hours guaranteed! Real Food, Pure Energy.",
+      "status": "PASSED",
+      "passed": true,
+      "expectedCount": 1,
+      "actualCount": 1,
+      "truePositives": 1,
+      "falsePositivesCount": 0,
+      "falsePositives": [],
+      "missedViolations": [],
+      "criticalMissed": false,
+      "precision": 1,
+      "recall": 1,
+      "computedScore": 76,
+      "expectedMinScore": 50,
+      "expectedMaxScore": 75,
+      "latencyMs": 3221,
+      "notes": "All core violations successfully identified with accurate severity and zero hallucinations.",
+      "findings": [
+        {
+          "ruleId": "6738c201a1b2c3d4e5f60201",
+          "severity": "critical",
+          "offendingText": "cures chronic digestive inflammation and eliminates all toxins from your liver in 24 hours guaranteed",
+          "explanation": "The content makes unsubstantiated medical and detox guarantee claims, which are strictly prohibited.",
+          "suggestedCorrection": "supports your digestive wellness and helps you feel refreshed."
+        }
+      ]
+    },
+    {
+      "id": "TC-002",
+      "title": "Clean Compliant Farmer Partnership Newsletter",
+      "category": "compliant",
+      "contentType": "email",
+      "content": "This Saturday, we are proud to spotlight Oakridge Organics, where every crisp leaf of baby kale in our Harvest Protein Bowl™ is harvested at sunrise. Pair your bowl with our signature Green Glow Elixir™, freshly pressed with heirloom apples and organic ginger. Real Food, Pure Energy.",
+      "status": "PASSED",
+      "passed": true,
+      "expectedCount": 0,
+      "actualCount": 0,
+      "truePositives": 0,
+      "falsePositivesCount": 0,
+      "falsePositives": [],
+      "missedViolations": [],
+      "criticalMissed": false,
+      "precision": 1,
+      "recall": 1,
+      "computedScore": 100,
+      "expectedMinScore": 98,
+      "expectedMaxScore": 100,
+      "latencyMs": 1644,
+      "notes": "Clean compliant copy correctly recognized with zero false positives.",
+      "findings": []
+    },
+    {
+      "id": "TC-003",
+      "title": "Clinical, Ingestion-Centric Phrasing",
+      "category": "minor_tone",
+      "contentType": "website_copy",
+      "content": "Our culinary kitchen optimizes bioperformance parameters through precision micronutrient delivery matrices. Savor our Farm-to-Bowl™ meal. Real Food, Pure Energy.",
+      "status": "PASSED",
+      "passed": true,
+      "expectedCount": 1,
+      "actualCount": 1,
+      "truePositives": 1,
+      "falsePositivesCount": 0,
+      "falsePositives": [],
+      "missedViolations": [],
+      "criticalMissed": false,
+      "precision": 1,
+      "recall": 1,
+      "computedScore": 92,
+      "expectedMinScore": 82,
+      "expectedMaxScore": 92,
+      "latencyMs": 1510,
+      "notes": "All core violations successfully identified with accurate severity and zero hallucinations.",
+      "findings": [
+        {
+          "ruleId": "6738c101a1b2c3d4e5f60101",
+          "severity": "medium",
+          "offendingText": "optimizes bioperformance parameters through precision micronutrient delivery matrices",
+          "explanation": "The text uses cold, clinical, and pseudo-scientific jargon which violates the brand's requirement for a warm and conversational tone.",
+          "suggestedCorrection": "Our kitchen crafts meals designed to nourish your body and support your natural vitality."
+        }
+      ]
+    },
+    {
+      "id": "TC-004",
+      "title": "Unsubstantiated Organic Provenance Claim",
+      "category": "misleading_claims",
+      "contentType": "ad_copy",
+      "content": "Taste our 100% organic everything with zero chemicals anywhere! Enjoy the Harvest Protein Bowl™ today. Real Food, Pure Energy.",
+      "status": "PASSED",
+      "passed": true,
+      "expectedCount": 1,
+      "actualCount": 1,
+      "truePositives": 1,
+      "falsePositivesCount": 0,
+      "falsePositives": [],
+      "missedViolations": [],
+      "criticalMissed": false,
+      "precision": 1,
+      "recall": 1,
+      "computedScore": 86,
+      "expectedMinScore": 70,
+      "expectedMaxScore": 85,
+      "latencyMs": 1599,
+      "notes": "All core violations successfully identified with accurate severity and zero hallucinations.",
+      "findings": [
+        {
+          "ruleId": "6738c203a1b2c3d4e5f60203",
+          "severity": "high",
+          "offendingText": "100% organic everything with zero chemicals anywhere",
+          "explanation": "Broad, unsubstantiated organic claims are prohibited. Organic claims must be certified and attributed to a specific partner farm.",
+          "suggestedCorrection": "Featuring certified organic ingredients from our trusted partner farms."
+        }
+      ]
+    },
+    {
+      "id": "TC-005",
+      "title": "Corporate Buzzwords & Fluff in B2B Announcement",
+      "category": "prohibited_phrases",
+      "contentType": "social_post",
+      "content": "FreshBite is leveraging strategic synergy across agricultural ecosystems to disrupt office catering! Order the Farm-to-Bowl™ lunch package today. Real Food, Pure Energy.",
+      "status": "PASSED",
+      "passed": true,
+      "expectedCount": 1,
+      "actualCount": 1,
+      "truePositives": 1,
+      "falsePositivesCount": 0,
+      "falsePositives": [],
+      "missedViolations": [],
+      "criticalMissed": false,
+      "precision": 1,
+      "recall": 1,
+      "computedScore": 86,
+      "expectedMinScore": 70,
+      "expectedMaxScore": 85,
+      "latencyMs": 1755,
+      "notes": "All core violations successfully identified with accurate severity and zero hallucinations.",
+      "findings": [
+        {
+          "ruleId": "6738c102a1b2c3d4e5f60102",
+          "severity": "high",
+          "offendingText": "leveraging strategic synergy across agricultural ecosystems to disrupt",
+          "explanation": "The text contains multiple prohibited corporate buzzwords ('leveraging', 'synergy', 'ecosystems', 'disrupt') which are strictly banned under brand governance.",
+          "suggestedCorrection": "FreshBite is partnering with local farms to bring better office catering to you!"
+        }
+      ]
+    },
+    {
+      "id": "TC-006",
+      "title": "Compound Violations: Hype Sale + Cure Claim + Unregistered Item",
+      "category": "multiple_violations",
+      "contentType": "ad_copy",
+      "content": "🚨 CRAZY BLOWOUT SALE! ACT NOW BEFORE IT'S GONE FOREVER!!! Try our new green glow drink that cures sluggish mornings and burns belly fat instantly. Real Food Pure Energy!!",
+      "status": "PASSED",
+      "passed": true,
+      "expectedCount": 4,
+      "actualCount": 4,
+      "truePositives": 4,
+      "falsePositivesCount": 0,
+      "falsePositives": [],
+      "missedViolations": [],
+      "criticalMissed": false,
+      "precision": 1,
+      "recall": 1,
+      "computedScore": 46,
+      "expectedMinScore": 20,
+      "expectedMaxScore": 50,
+      "latencyMs": 3240,
+      "notes": "All core violations successfully identified with accurate severity and zero hallucinations.",
+      "findings": [
+        {
+          "ruleId": "6738c401a1b2c3d4e5f60401",
+          "severity": "medium",
+          "offendingText": "🚨 CRAZY BLOWOUT SALE! ACT NOW BEFORE IT'S GONE FOREVER!!!",
+          "explanation": "The promotional copy uses aggressive urgency, all-caps, and prohibited spam phrases.",
+          "suggestedCorrection": "Join us this week to enjoy our latest seasonal offerings."
+        },
+        {
+          "ruleId": "6738c301a1b2c3d4e5f60301",
+          "severity": "high",
+          "offendingText": "green glow drink",
+          "explanation": "Signature menu items must use proper Title Casing and include the trademark symbol (™).",
+          "suggestedCorrection": "Green Glow Elixir™"
+        },
+        {
+          "ruleId": "6738c201a1b2c3d4e5f60201",
+          "severity": "critical",
+          "offendingText": "cures sluggish mornings and burns belly fat instantly",
+          "explanation": "The copy makes unsubstantiated medical and weight-loss claims, which are strictly prohibited.",
+          "suggestedCorrection": "supports your morning vitality and fuels your day."
+        },
+        {
+          "ruleId": "6738c302a1b2c3d4e5f60302",
+          "severity": "medium",
+          "offendingText": "Real Food Pure Energy!!",
+          "explanation": "The official tagline must be 'Real Food, Pure Energy.' including the comma and period, with no exclamation marks.",
+          "suggestedCorrection": "Real Food, Pure Energy."
+        }
+      ]
+    },
+    {
+      "id": "TC-007",
+      "title": "Missing Trademark Symbols and Lowercase Casing",
+      "category": "trademark_misuse",
+      "contentType": "social_post",
+      "content": "Stop by our downtown location for a fresh farm to bowl lunch and avocado crisp tartine made with local avocados. Real Food, Pure Energy.",
+      "status": "PASSED",
+      "passed": true,
+      "expectedCount": 2,
+      "actualCount": 2,
+      "truePositives": 2,
+      "falsePositivesCount": 0,
+      "falsePositives": [],
+      "missedViolations": [],
+      "criticalMissed": false,
+      "precision": 1,
+      "recall": 1,
+      "computedScore": 72,
+      "expectedMinScore": 65,
+      "expectedMaxScore": 78,
+      "latencyMs": 1816,
+      "notes": "All core violations successfully identified with accurate severity and zero hallucinations.",
+      "findings": [
+        {
+          "ruleId": "6738c301a1b2c3d4e5f60301",
+          "severity": "high",
+          "offendingText": "farm to bowl",
+          "explanation": "Signature menu items must use proper Title Casing and include the trademark symbol (™).",
+          "suggestedCorrection": "Farm-to-Bowl™"
+        },
+        {
+          "ruleId": "6738c301a1b2c3d4e5f60301",
+          "severity": "high",
+          "offendingText": "avocado crisp tartine",
+          "explanation": "Signature menu items must use proper Title Casing and include the trademark symbol (™).",
+          "suggestedCorrection": "Avocado Crisp Tartine™"
+        }
+      ]
+    },
+    {
+      "id": "TC-008",
+      "title": "Gluten-Friendly Claim Lacking Cross-Contamination Warning",
+      "category": "allergen_disclosure",
+      "contentType": "social_post",
+      "content": "Looking for wheat-free options? Our Harvest Protein Bowl™ is 100% gluten-free and allergen-proof! Real Food, Pure Energy.",
+      "status": "PASSED",
+      "passed": true,
+      "expectedCount": 1,
+      "actualCount": 1,
+      "truePositives": 1,
+      "falsePositivesCount": 0,
+      "falsePositives": [],
+      "missedViolations": [],
+      "criticalMissed": false,
+      "precision": 1,
+      "recall": 1,
+      "computedScore": 76,
+      "expectedMinScore": 55,
+      "expectedMaxScore": 75,
+      "latencyMs": 21427,
+      "notes": "All core violations successfully identified with accurate severity and zero hallucinations.",
+      "findings": [
+        {
+          "ruleId": "6738c202a1b2c3d4e5f60202",
+          "severity": "critical",
+          "offendingText": "100% gluten-free and allergen-proof",
+          "explanation": "The brand strictly prohibits claims of 100% allergen safety or 100% gluten-free status. Any mention of gluten-friendly options must include the mandatory cross-contact notice.",
+          "suggestedCorrection": "Our Harvest Protein Bowl™ is Gluten-Friendly (prepared in a facility that also handles wheat)."
+        }
+      ]
+    },
+    {
+      "id": "TC-009",
+      "title": "Excessive All-Caps and Urgency Pressure",
+      "category": "aggressive_promotional",
+      "contentType": "email",
+      "content": "DON'T MISS OUT ON THIS INSANE DEAL! Use code BITE50 right now before the clock runs out! Enjoy our Harvest Protein Bowl™. Real Food, Pure Energy.",
+      "status": "PASSED",
+      "passed": true,
+      "expectedCount": 1,
+      "actualCount": 1,
+      "truePositives": 1,
+      "falsePositivesCount": 0,
+      "falsePositives": [],
+      "missedViolations": [],
+      "criticalMissed": false,
+      "precision": 1,
+      "recall": 1,
+      "computedScore": 92,
+      "expectedMinScore": 80,
+      "expectedMaxScore": 92,
+      "latencyMs": 1509,
+      "notes": "All core violations successfully identified with accurate severity and zero hallucinations.",
+      "findings": [
+        {
+          "ruleId": "6738c401a1b2c3d4e5f60401",
+          "severity": "medium",
+          "offendingText": "DON'T MISS OUT ON THIS INSANE DEAL! Use code BITE50 right now before the clock runs out!",
+          "explanation": "The promotional language uses aggressive urgency, all-caps, and panic-inducing phrases which violate the brand's requirement for thoughtful and respectful communication.",
+          "suggestedCorrection": "Enjoy 50% off your next order with code BITE50. We look forward to serving you."
+        }
+      ]
+    },
+    {
+      "id": "TC-010",
+      "title": "Altered Brand Slogan Phrasing and Exclamations",
+      "category": "tagline_tampering",
+      "contentType": "social_post",
+      "content": "Fresh ingredients, organic greens, and craft dressings made from scratch. FreshBite: Real Food for Pure Energy!!!",
+      "status": "PARTIAL",
+      "passed": false,
+      "expectedCount": 1,
+      "actualCount": 2,
+      "truePositives": 1,
+      "falsePositivesCount": 1,
+      "falsePositives": [
+        {
+          "offendingText": "organic greens",
+          "severity": "high",
+          "explanation": "The claim 'organic' is used without specifying a certified partner farm, which violates the provenance requirement."
+        }
+      ],
+      "missedViolations": [],
+      "criticalMissed": false,
+      "precision": 0.5,
+      "recall": 1,
+      "computedScore": 78,
+      "expectedMinScore": 82,
+      "expectedMaxScore": 92,
+      "latencyMs": 2578,
+      "notes": "Partially detected: 1/1 expected violations found. (1 unprompted/extra findings)",
+      "findings": [
+        {
+          "ruleId": "6738c203a1b2c3d4e5f60203",
+          "severity": "high",
+          "offendingText": "organic greens",
+          "explanation": "The claim 'organic' is used without specifying a certified partner farm, which violates the provenance requirement.",
+          "suggestedCorrection": "Featuring certified organic greens from Willow Creek Farm."
+        },
+        {
+          "ruleId": "6738c302a1b2c3d4e5f60302",
+          "severity": "medium",
+          "offendingText": "Real Food for Pure Energy!!!",
+          "explanation": "The tagline is altered ('for' added) and includes exclamation marks, violating the strict verbatim requirement.",
+          "suggestedCorrection": "Real Food, Pure Energy."
+        }
+      ]
+    },
+    {
+      "id": "TC-011",
+      "title": "Clean Compliant Instagram Story Copy",
+      "category": "compliant",
+      "contentType": "social_post",
+      "content": "Midday recharge with our Avocado Crisp Tartine™, freshly made with sourdough and organic cilantro from Willow Creek Farm. Real Food, Pure Energy.",
+      "status": "PASSED",
+      "passed": true,
+      "expectedCount": 0,
+      "actualCount": 0,
+      "truePositives": 0,
+      "falsePositivesCount": 0,
+      "falsePositives": [],
+      "missedViolations": [],
+      "criticalMissed": false,
+      "precision": 1,
+      "recall": 1,
+      "computedScore": 100,
+      "expectedMinScore": 98,
+      "expectedMaxScore": 100,
+      "latencyMs": 1007,
+      "notes": "Clean compliant copy correctly recognized with zero false positives.",
+      "findings": []
+    },
+    {
+      "id": "TC-012",
+      "title": "Incorrect Loyalty Program Terminology",
+      "category": "loyalty_terminology",
+      "contentType": "email",
+      "content": "Join our VIP Cashback Club today and start collecting cash tokens on every Harvest Protein Bowl™ order. Real Food, Pure Energy.",
+      "status": "PARTIAL",
+      "passed": false,
+      "expectedCount": 1,
+      "actualCount": 2,
+      "truePositives": 1,
+      "falsePositivesCount": 1,
+      "falsePositives": [
+        {
+          "offendingText": "cash tokens",
+          "severity": "low",
+          "explanation": "Loyalty currency must be referred to exclusively as 'Bite Points'."
+        }
+      ],
+      "missedViolations": [],
+      "criticalMissed": false,
+      "precision": 0.5,
+      "recall": 1,
+      "computedScore": 92,
+      "expectedMinScore": 88,
+      "expectedMaxScore": 96,
+      "latencyMs": 2034,
+      "notes": "Partially detected: 1/1 expected violations found. (1 unprompted/extra findings)",
+      "findings": [
+        {
+          "ruleId": "6738c402a1b2c3d4e5f60402",
+          "severity": "low",
+          "offendingText": "VIP Cashback Club",
+          "explanation": "The loyalty program must be referred to exclusively as 'FreshBite Circle'.",
+          "suggestedCorrection": "Join our FreshBite Circle today"
+        },
+        {
+          "ruleId": "6738c402a1b2c3d4e5f60402",
+          "severity": "low",
+          "offendingText": "cash tokens",
+          "explanation": "Loyalty currency must be referred to exclusively as 'Bite Points'.",
+          "suggestedCorrection": "Bite Points"
+        }
+      ]
+    },
+    {
+      "id": "TC-013",
+      "title": "[ADDITIONAL] Missing Trademark Symbol on Harvest Protein Bowl",
+      "category": "trademark_misuse",
+      "contentType": "social_post",
+      "content": "Fuel your active day with our signature Harvest Protein Bowl crafted with local greens and roasted quinoa. Real Food, Pure Energy.",
+      "status": "PASSED",
+      "passed": true,
+      "expectedCount": 1,
+      "actualCount": 1,
+      "truePositives": 1,
+      "falsePositivesCount": 0,
+      "falsePositives": [],
+      "missedViolations": [],
+      "criticalMissed": false,
+      "precision": 1,
+      "recall": 1,
+      "computedScore": 86,
+      "expectedMinScore": 80,
+      "expectedMaxScore": 88,
+      "latencyMs": 1597,
+      "notes": "All core violations successfully identified with accurate severity and zero hallucinations.",
+      "findings": [
+        {
+          "ruleId": "6738c301a1b2c3d4e5f60301",
+          "severity": "high",
+          "offendingText": "Harvest Protein Bowl",
+          "explanation": "Signature menu items must include the trademark symbol (™) on every occurrence.",
+          "suggestedCorrection": "Harvest Protein Bowl™"
+        }
+      ]
+    },
+    {
+      "id": "TC-014",
+      "title": "[ADDITIONAL] Immune System Shield and Flu Prevention Claim",
+      "category": "clear_violation",
+      "contentType": "social_post",
+      "content": "Boost your white blood cells and shield your body against catching seasonal flu with our fresh ginger elixir! Real Food, Pure Energy.",
+      "status": "PASSED",
+      "passed": true,
+      "expectedCount": 1,
+      "actualCount": 1,
+      "truePositives": 1,
+      "falsePositivesCount": 0,
+      "falsePositives": [],
+      "missedViolations": [],
+      "criticalMissed": false,
+      "precision": 1,
+      "recall": 1,
+      "computedScore": 76,
+      "expectedMinScore": 60,
+      "expectedMaxScore": 78,
+      "latencyMs": 2181,
+      "notes": "All core violations successfully identified with accurate severity and zero hallucinations.",
+      "findings": [
+        {
+          "ruleId": "6738c201a1b2c3d4e5f60201",
+          "severity": "critical",
+          "offendingText": "Boost your white blood cells and shield your body against catching seasonal flu",
+          "explanation": "The content makes an unsubstantiated medical claim regarding disease prevention (flu) and immune system manipulation, which is strictly prohibited.",
+          "suggestedCorrection": "Support your natural vitality with our fresh ginger elixir."
+        }
+      ]
+    },
+    {
+      "id": "TC-015",
+      "title": "[ADDITIONAL] Fully Compliant Store Opening Press Release",
+      "category": "compliant",
+      "contentType": "press_release",
+      "content": "FreshBite is pleased to announce the opening of its newest kitchen in Austin this Friday. Guests are invited to enjoy scratch-made signatures including the Farm-to-Bowl™ lunch and cold-pressed Green Glow Elixir™. Real Food, Pure Energy.",
+      "status": "PASSED",
+      "passed": true,
+      "expectedCount": 0,
+      "actualCount": 0,
+      "truePositives": 0,
+      "falsePositivesCount": 0,
+      "falsePositives": [],
+      "missedViolations": [],
+      "criticalMissed": false,
+      "precision": 1,
+      "recall": 1,
+      "computedScore": 100,
+      "expectedMinScore": 98,
+      "expectedMaxScore": 100,
+      "latencyMs": 2731,
+      "notes": "Clean compliant copy correctly recognized with zero false positives.",
+      "findings": []
+    },
+    {
+      "id": "TC-016",
+      "title": "[ADDITIONAL] Altered Slogan with Missing Comma and Exclamation",
+      "category": "tagline_tampering",
+      "contentType": "social_post",
+      "content": "Crafted with love from organic farms to your table. Try our Avocado Crisp Tartine™ today. FreshBite: Real Food Pure Energy!",
+      "status": "PARTIAL",
+      "passed": false,
+      "expectedCount": 1,
+      "actualCount": 2,
+      "truePositives": 1,
+      "falsePositivesCount": 1,
+      "falsePositives": [
+        {
+          "offendingText": "organic farms",
+          "severity": "high",
+          "explanation": "The claim of 'organic' is broad and unsubstantiated; it must be certified organic and attributed to a specific named partner farm."
+        }
+      ],
+      "missedViolations": [],
+      "criticalMissed": false,
+      "precision": 0.5,
+      "recall": 1,
+      "computedScore": 78,
+      "expectedMinScore": 82,
+      "expectedMaxScore": 92,
+      "latencyMs": 2995,
+      "notes": "Partially detected: 1/1 expected violations found. (1 unprompted/extra findings)",
+      "findings": [
+        {
+          "ruleId": "6738c203a1b2c3d4e5f60203",
+          "severity": "high",
+          "offendingText": "organic farms",
+          "explanation": "The claim of 'organic' is broad and unsubstantiated; it must be certified organic and attributed to a specific named partner farm.",
+          "suggestedCorrection": "Crafted with love using certified organic ingredients from Oakridge Organics."
+        },
+        {
+          "ruleId": "6738c302a1b2c3d4e5f60302",
+          "severity": "medium",
+          "offendingText": "Real Food Pure Energy!",
+          "explanation": "The official tagline must be 'Real Food, Pure Energy.' including the comma and the period, without an exclamation mark.",
+          "suggestedCorrection": "Real Food, Pure Energy."
+        }
+      ]
+    },
+    {
+      "id": "TC-017",
+      "title": "[ADDITIONAL] Banned Buzzwords \"Leverage\" and \"Paradigm Shift\"",
+      "category": "prohibited_phrases",
+      "contentType": "website_copy",
+      "content": "Our team is ready to leverage regional farm partnerships and drive a paradigm shift in wholesome fast-casual dining. Savor our Farm-to-Bowl™ meal. Real Food, Pure Energy.",
+      "status": "PARTIAL",
+      "passed": false,
+      "expectedCount": 1,
+      "actualCount": 2,
+      "truePositives": 1,
+      "falsePositivesCount": 1,
+      "falsePositives": [
+        {
+          "offendingText": "paradigm shift",
+          "severity": "high",
+          "explanation": "The phrase 'paradigm shift' is a prohibited corporate buzzword."
+        }
+      ],
+      "missedViolations": [],
+      "criticalMissed": false,
+      "precision": 0.5,
+      "recall": 1,
+      "computedScore": 72,
+      "expectedMinScore": 70,
+      "expectedMaxScore": 85,
+      "latencyMs": 1340,
+      "notes": "Partially detected: 1/1 expected violations found. (1 unprompted/extra findings)",
+      "findings": [
+        {
+          "ruleId": "6738c102a1b2c3d4e5f60102",
+          "severity": "high",
+          "offendingText": "leverage",
+          "explanation": "The word 'leverage' is a prohibited corporate buzzword.",
+          "suggestedCorrection": "utilize"
+        },
+        {
+          "ruleId": "6738c102a1b2c3d4e5f60102",
+          "severity": "high",
+          "offendingText": "paradigm shift",
+          "explanation": "The phrase 'paradigm shift' is a prohibited corporate buzzword.",
+          "suggestedCorrection": "new standard"
+        }
+      ]
+    },
+    {
+      "id": "TC-018",
+      "title": "[ADDITIONAL] Fully Compliant Allergen Disclosure Announcement",
+      "category": "compliant",
+      "contentType": "social_post",
+      "content": "Try our Gluten-Friendly crust (prepared in a facility that also handles wheat). Pair it with crisp greens from certified organic partner Oakridge Organics. Real Food, Pure Energy.",
+      "status": "PASSED",
+      "passed": true,
+      "expectedCount": 0,
+      "actualCount": 0,
+      "truePositives": 0,
+      "falsePositivesCount": 0,
+      "falsePositives": [],
+      "missedViolations": [],
+      "criticalMissed": false,
+      "precision": 1,
+      "recall": 1,
+      "computedScore": 100,
+      "expectedMinScore": 98,
+      "expectedMaxScore": 100,
+      "latencyMs": 1347,
+      "notes": "Clean compliant copy correctly recognized with zero false positives.",
+      "findings": []
+    }
+  ]
+}

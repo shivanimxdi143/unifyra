@@ -192,8 +192,8 @@ export default function BrandGuidelines() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Brand Guidelines & Rules"
-        subtitle={`Active corporate rules, tone standards, and regulatory constraints enforced automatically across all ${BRAND_PROFILE.name} communications.`}
+        title="Brand Guidelines"
+        subtitle={`Active brand rules, tone standards, and compliance policies enforced during AI audits for ${BRAND_PROFILE.name}.`}
         badge={
           <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">
             {guidelines.length} Rules Active
@@ -205,7 +205,7 @@ export default function BrandGuidelines() {
             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs transition-all shadow-sm shadow-indigo-950/20 cursor-pointer"
           >
             <Plus className="w-4 h-4" />
-            <span>Create New Guideline</span>
+            <span>Add Guideline</span>
           </button>
         }
       />
@@ -218,7 +218,7 @@ export default function BrandGuidelines() {
             <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
-              placeholder="Search by rule title, ID (e.g. BG-201), keywords..."
+              placeholder="Search rules by title, keyword, or ID..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:bg-white text-xs rounded-xl pl-9 pr-4 py-2.5 text-slate-900 placeholder:text-slate-400 outline-none transition-all"

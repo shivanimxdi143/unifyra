@@ -134,16 +134,27 @@ export async function createAndAnalyzeSubmission({
   };
 }
 
+export async function resubmitSubmission(submissionId, {
+  content,
+  contentType = 'social_post'
+}) {
+  const res = await api.resubmitContent(submissionId, { content, contentType });
+  return res.data;
+}
+
 export async function resubmitAndReanalyze(submissionId, {
   content,
   contentType = 'social_post'
 }) {
-  // Step 1: Update content and reset status to 'pending'
-  await api.resubmitContent(submissionId, { content, contentType });
+  // Step 1: Update content and reset status to 'pending' via PUT /api/submissions/:id/resubmit
+  const resubmitRes = await api.resubmitContent(submissionId, { content, contentType });
 
   // Step 2: Re-run Gemini AI brand analysis
   const analysisRes = await api.analyzeSubmission(submissionId);
-  return analysisRes.data;
+  return {
+    ...analysisRes.data,
+    submission: resubmitRes.data
+  };
 }
 
 /**

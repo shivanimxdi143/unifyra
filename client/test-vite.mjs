@@ -3,7 +3,7 @@ import { preview } from 'vite';
 async function testVite() {
   const server = await preview({
     root: '.',
-    preview: { port: 4173 }
+    preview: { host: '127.0.0.1', port: 4173 }
   });
 
   const address = server.httpServer.address();
@@ -22,7 +22,7 @@ async function testVite() {
   let allPassed = true;
   for (const route of routes) {
     try {
-      const res = await fetch(`http://localhost:4173${route}`);
+      const res = await fetch(`http://127.0.0.1:4173${route}`);
       const text = await res.text();
       const hasRoot = text.includes('id="root"');
       const hasTitle = text.includes('Unifyra');

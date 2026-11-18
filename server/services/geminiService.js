@@ -80,8 +80,10 @@ const analyzeContentWithGemini = async ({ content, contentType = 'social_post', 
   guidelines.forEach(g => {
     if (Array.isArray(g.rules)) {
       g.rules.forEach(r => {
-        if (r._id) availableRuleIds.push(r._id);
+        if (r._id) availableRuleIds.push(r._id.toString());
       });
+    } else if (g && g._id) {
+      availableRuleIds.push(g._id.toString());
     }
   });
 

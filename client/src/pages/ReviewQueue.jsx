@@ -5,7 +5,8 @@ import {
   XCircle,
   AlertTriangle,
   Search,
-  UserCheck
+  UserCheck,
+  ShieldAlert
 } from 'lucide-react';
 import PageHeader from '../components/common/PageHeader';
 import Card from '../components/common/Card';
@@ -23,6 +24,8 @@ import { useOutletContext } from 'react-router-dom';
 
 export default function ReviewQueue() {
   const { showToast, currentRole } = useOutletContext();
+  const canReview = currentRole === 'Reviewer' || currentRole === 'Brand Manager';
+
   const [submissions, setSubmissions] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -35,14 +38,21 @@ export default function ReviewQueue() {
 
   const normalizeSubmission = (sub) => {
     const findings = sub.findings || [];
-    let penalty = 0;
-    findings.forEach((f) => {
-      if (f.severity === 'critical') penalty += 24;
-      else if (f.severity === 'high') penalty += 14;
-      else if (f.severity === 'medium') penalty += 8;
-      else penalty += 4;
-    });
-    const score = Math.max(25, Math.min(100, 100 - penalty));
+    let score = sub.complianceScore;
+    if (score === null || score === undefined) {
+      if (sub.status === 'pending') {
+        score = null;
+      } else {
+        let penalty = 0;
+        findings.forEach((f) => {
+          if (f.severity === 'critical') penalty += 24;
+          else if (f.severity === 'high') penalty += 14;
+          else if (f.severity === 'medium') penalty += 8;
+          else penalty += 4;
+        });
+        score = Math.max(25, Math.min(100, 100 - penalty));
+      }
+    }
 
     return {
       _id: sub._id,
@@ -125,6 +135,10 @@ export default function ReviewQueue() {
 
   const handleDecision = async (newStatus) => {
     if (!selectedSub) return;
+    if (!canReview) {
+      showToast('Permission denied: Only Reviewer and Brand Manager roles can submit review decisions.');
+      return;
+    }
 
     setIsSubmittingDecision(true);
     try {
@@ -171,11 +185,11 @@ export default function ReviewQueue() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Human Review & Editorial Queue"
-        subtitle="Mandatory governance verification. AI evaluates compliance; certified human reviewers make final editorial publishing decisions."
+        title="Review Queue"
+        subtitle="Inspect AI compliance findings, review draft copy, and approve, reject, or request changes before publication."
         badge={
           <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-800 border border-amber-200">
-            {pendingCount} Pending Action
+            {pendingCount} Awaiting Review
           </span>
         }
       />
@@ -188,13 +202,13 @@ export default function ReviewQueue() {
           </div>
           <div>
             <h4 className="text-sm font-bold text-white flex items-center gap-2">
-              Human-in-the-Loop Governance Guardrail
+              Editorial Review Station
               <span className="text-[10px] bg-indigo-600 text-white font-mono px-1.5 py-0.2 rounded font-bold">
-                Zero Auto-Approval
+                Human Review Required
               </span>
             </h4>
             <p className="text-xs text-slate-300 mt-0.5">
-              Reviewer session: <strong>{currentRole}</strong>. Verify AI findings, evaluate offending phrases, and apply editorial decisions.
+              Logged in as <strong>{currentRole}</strong>. Verify AI findings, evaluate flagged text, and submit your editorial decision.
             </p>
           </div>
         </div>
@@ -306,7 +320,13 @@ export default function ReviewQueue() {
                       </span>
                     </div>
 
-                    <ScoreMeter score={sub.score} size="sm" showLabel={false} />
+                    {sub.score != null ? (
+                      <ScoreMeter score={sub.score} size="sm" showLabel={false} />
+                    ) : (
+                      <span className="text-[10px] font-semibold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded font-mono">
+                        Pending
+                      </span>
+                    )}
                   </div>
                 </div>
               );
@@ -331,7 +351,7 @@ export default function ReviewQueue() {
               title={selectedSub.title}
               subtitle={`Channel: ${selectedSub.channel} • Campaign: ${selectedSub.campaign || 'N/A'}`}
               badge={<StatusBadge status={selectedSub.status} size="sm" />}
-              actions={<ScoreMeter score={selectedSub.score} />}
+              actions={selectedSub.score != null ? <ScoreMeter score={selectedSub.score} /> : null}
             >
               <div className="space-y-5">
                 {/* Content Box */}
@@ -412,58 +432,73 @@ export default function ReviewQueue() {
                   </div>
                 )}
 
-                {/* Reviewer Notes Input */}
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
-                    Editorial Reviewer Feedback / Notes
-                  </label>
-                  <textarea
-                    rows={3}
-                    placeholder="Provide constructive feedback for the content author or record reasons for approval/rejection..."
-                    value={reviewerNotes}
-                    onChange={(e) => setReviewerNotes(e.target.value)}
-                    className="w-full text-xs p-3 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none"
-                  />
-                </div>
+                {/* Reviewer Notes & Action Buttons (Reviewer & Brand Manager only) or Read-Only Banner (Employee) */}
+                {canReview ? (
+                  <>
+                    <div>
+                      <label className="block text-xs font-bold uppercase tracking-wider text-slate-600 mb-1">
+                        Editorial Reviewer Feedback / Notes
+                      </label>
+                      <textarea
+                        rows={3}
+                        placeholder="Provide constructive feedback for the content author or record reasons for approval/rejection..."
+                        value={reviewerNotes}
+                        onChange={(e) => setReviewerNotes(e.target.value)}
+                        className="w-full text-xs p-3 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none"
+                      />
+                    </div>
 
-                {/* Review Action Buttons */}
-                <div className="pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3">
-                  <div className="text-[11px] text-slate-400">
-                    Decision logged by <strong>{currentRole}</strong>
+                    <div className="pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-3">
+                      <div className="text-[11px] text-slate-400">
+                        Decision logged by <strong>{currentRole}</strong>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          disabled={isSubmittingDecision}
+                          onClick={() => handleDecision('rejected')}
+                          className="px-3 py-2 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 disabled:opacity-50 text-rose-800 font-semibold text-xs transition-colors flex items-center gap-1.5 cursor-pointer"
+                        >
+                          <XCircle className="w-3.5 h-3.5" />
+                          <span>Reject</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          disabled={isSubmittingDecision}
+                          onClick={() => handleDecision('changes_requested')}
+                          className="px-3.5 py-2 rounded-xl border border-amber-300 bg-amber-50 hover:bg-amber-100 disabled:opacity-50 text-amber-900 font-semibold text-xs transition-colors flex items-center gap-1.5 cursor-pointer"
+                        >
+                          <AlertTriangle className="w-3.5 h-3.5" />
+                          <span>Request Changes</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          disabled={isSubmittingDecision}
+                          onClick={() => handleDecision('approved')}
+                          className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-semibold text-xs transition-colors shadow-sm shadow-emerald-950/20 flex items-center gap-1.5 cursor-pointer"
+                        >
+                          <CheckCircle2 className="w-4 h-4" />
+                          <span>{isSubmittingDecision ? 'Submitting...' : 'Approve Content'}</span>
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div className="pt-3 border-t border-slate-100">
+                    <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-600 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <ShieldAlert className="w-4 h-4 text-amber-500 shrink-0" />
+                        <span>Logged in as <strong>{currentRole || 'Employee'}</strong> (View-Only Mode)</span>
+                      </div>
+                      <span className="text-[11px] text-slate-500 font-medium">
+                        Only Reviewers and Brand Managers can approve, reject, or request changes.
+                      </span>
+                    </div>
                   </div>
-
-                  <div className="flex items-center gap-2">
-                    <button
-                      type="button"
-                      disabled={isSubmittingDecision}
-                      onClick={() => handleDecision('rejected')}
-                      className="px-3 py-2 rounded-xl border border-rose-200 bg-rose-50 hover:bg-rose-100 disabled:opacity-50 text-rose-800 font-semibold text-xs transition-colors flex items-center gap-1.5 cursor-pointer"
-                    >
-                      <XCircle className="w-3.5 h-3.5" />
-                      <span>Reject</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      disabled={isSubmittingDecision}
-                      onClick={() => handleDecision('changes_requested')}
-                      className="px-3.5 py-2 rounded-xl border border-amber-300 bg-amber-50 hover:bg-amber-100 disabled:opacity-50 text-amber-900 font-semibold text-xs transition-colors flex items-center gap-1.5 cursor-pointer"
-                    >
-                      <AlertTriangle className="w-3.5 h-3.5" />
-                      <span>Request Changes</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      disabled={isSubmittingDecision}
-                      onClick={() => handleDecision('approved')}
-                      className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white font-semibold text-xs transition-colors shadow-sm shadow-emerald-950/20 flex items-center gap-1.5 cursor-pointer"
-                    >
-                      <CheckCircle2 className="w-4 h-4" />
-                      <span>{isSubmittingDecision ? 'Submitting...' : 'Approve Content'}</span>
-                    </button>
-                  </div>
-                </div>
+                )}
               </div>
             </Card>
           )}

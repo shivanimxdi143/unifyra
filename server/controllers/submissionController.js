@@ -81,10 +81,47 @@ const getSubmissions = async (req, res, next) => {
 
     const submissions = await Submission.find(filter).sort({ createdAt: -1 });
 
+    // Enrich submissions with attached findings and compute complianceScore if needed
+    const submissionIds = submissions.map(s => s._id);
+    const findings = await Finding.find({ submissionId: { $in: submissionIds } });
+
+    const findingsMap = {};
+    findings.forEach(f => {
+      const key = f.submissionId.toString();
+      if (!findingsMap[key]) findingsMap[key] = [];
+      findingsMap[key].push(f);
+    });
+
+    const enrichedSubmissions = submissions.map(s => {
+      const subFindings = findingsMap[s._id.toString()] || [];
+      let score = s.complianceScore;
+      if (score === null || score === undefined) {
+        if (s.status === 'pending') {
+          score = null;
+        } else {
+          let penalty = 0;
+          subFindings.forEach(f => {
+            if (f.severity === 'critical') penalty += 24;
+            else if (f.severity === 'high') penalty += 14;
+            else if (f.severity === 'medium') penalty += 8;
+            else penalty += 4;
+          });
+          score = Math.max(25, Math.min(100, 100 - penalty));
+        }
+      }
+
+      return {
+        ...s.toObject(),
+        complianceScore: score,
+        findingsCount: subFindings.length,
+        findings: subFindings
+      };
+    });
+
     res.status(200).json({
       success: true,
-      count: submissions.length,
-      data: submissions
+      count: enrichedSubmissions.length,
+      data: enrichedSubmissions
     });
   } catch (error) {
     next(error);
@@ -119,10 +156,28 @@ const getSubmissionById = async (req, res, next) => {
     // Retrieve associated findings for this submission
     const findings = await Finding.find({ submissionId: id }).sort({ createdAt: -1 });
 
+    let score = submission.complianceScore;
+    if (score === null || score === undefined) {
+      if (submission.status === 'pending') {
+        score = null;
+      } else {
+        let penalty = 0;
+        findings.forEach(f => {
+          if (f.severity === 'critical') penalty += 24;
+          else if (f.severity === 'high') penalty += 14;
+          else if (f.severity === 'medium') penalty += 8;
+          else penalty += 4;
+        });
+        score = Math.max(25, Math.min(100, 100 - penalty));
+      }
+    }
+
     res.status(200).json({
       success: true,
       data: {
         ...submission.toObject(),
+        complianceScore: score,
+        findingsCount: findings.length,
         findings: findings
       }
     });
@@ -151,10 +206,46 @@ const getSubmissionsByUser = async (req, res, next) => {
       submittedBy: new RegExp(`^${userId.trim()}$`, 'i')
     }).sort({ createdAt: -1 });
 
+    const submissionIds = submissions.map(s => s._id);
+    const findings = await Finding.find({ submissionId: { $in: submissionIds } });
+
+    const findingsMap = {};
+    findings.forEach(f => {
+      const key = f.submissionId.toString();
+      if (!findingsMap[key]) findingsMap[key] = [];
+      findingsMap[key].push(f);
+    });
+
+    const enrichedSubmissions = submissions.map(s => {
+      const subFindings = findingsMap[s._id.toString()] || [];
+      let score = s.complianceScore;
+      if (score === null || score === undefined) {
+        if (s.status === 'pending') {
+          score = null;
+        } else {
+          let penalty = 0;
+          subFindings.forEach(f => {
+            if (f.severity === 'critical') penalty += 24;
+            else if (f.severity === 'high') penalty += 14;
+            else if (f.severity === 'medium') penalty += 8;
+            else penalty += 4;
+          });
+          score = Math.max(25, Math.min(100, 100 - penalty));
+        }
+      }
+
+      return {
+        ...s.toObject(),
+        complianceScore: score,
+        findingsCount: subFindings.length,
+        findings: subFindings
+      };
+    });
+
     res.status(200).json({
       success: true,
-      count: submissions.length,
-      data: submissions
+      count: enrichedSubmissions.length,
+      data: enrichedSubmissions
     });
   } catch (error) {
     next(error);
@@ -193,12 +284,13 @@ const resubmitContent = async (req, res, next) => {
       });
     }
 
-    // Update content and reset status to pending
+    // Update content and reset status to pending (clear previous compliance score)
     submission.content = content.trim();
     if (contentType) {
       submission.contentType = contentType.trim().toLowerCase();
     }
     submission.status = 'pending';
+    submission.complianceScore = null;
     await submission.save();
 
     // Clear old findings to prevent duplicates upon re-analysis (review history in Review collection is retained)

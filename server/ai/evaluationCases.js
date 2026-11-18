@@ -343,6 +343,118 @@ const EVALUATION_CASES = [
     ],
     expectedMaxScore: 96,
     expectedMinScore: 88
+  },
+
+  // 13. [ADDITIONAL BENCHMARK CASE] Trademark Misuse: Missing Trademark Symbol
+  {
+    id: 'TC-013',
+    title: '[ADDITIONAL] Missing Trademark Symbol on Harvest Protein Bowl',
+    category: 'trademark_misuse',
+    contentType: 'social_post',
+    content: 'Fuel your active day with our signature Harvest Protein Bowl crafted with local greens and roasted quinoa. Real Food, Pure Energy.',
+    guidelines: STANDARD_FRESHBITE_GUIDELINES,
+    expectedFindingCount: 1,
+    expectedFindings: [
+      {
+        ruleId: '6738c301a1b2c3d4e5f60301',
+        severity: 'high',
+        offendingText: 'Harvest Protein Bowl',
+        explanation: 'Signature item must use proper title casing and trademark symbol: Harvest Protein Bowl™.'
+      }
+    ],
+    expectedMaxScore: 88,
+    expectedMinScore: 80
+  },
+
+  // 14. [ADDITIONAL BENCHMARK CASE] Medical Claim: Immune System Shield & Flu Prevention
+  {
+    id: 'TC-014',
+    title: '[ADDITIONAL] Immune System Shield and Flu Prevention Claim',
+    category: 'clear_violation',
+    contentType: 'social_post',
+    content: 'Boost your white blood cells and shield your body against catching seasonal flu with our fresh ginger elixir! Real Food, Pure Energy.',
+    guidelines: STANDARD_FRESHBITE_GUIDELINES,
+    expectedFindingCount: 1,
+    expectedFindings: [
+      {
+        ruleId: '6738c201a1b2c3d4e5f60201',
+        severity: 'critical',
+        offendingText: 'shield your body against catching seasonal flu',
+        explanation: 'Disease prevention and immune shield claims violate health claim guidelines.'
+      }
+    ],
+    expectedMaxScore: 78,
+    expectedMinScore: 60
+  },
+
+  // 15. [ADDITIONAL BENCHMARK CASE] Fully Compliant Press Release
+  {
+    id: 'TC-015',
+    title: '[ADDITIONAL] Fully Compliant Store Opening Press Release',
+    category: 'compliant',
+    contentType: 'press_release',
+    content: 'FreshBite is pleased to announce the opening of its newest kitchen in Austin this Friday. Guests are invited to enjoy scratch-made signatures including the Farm-to-Bowl™ lunch and cold-pressed Green Glow Elixir™. Real Food, Pure Energy.',
+    guidelines: STANDARD_FRESHBITE_GUIDELINES,
+    expectedFindingCount: 0,
+    expectedFindings: [],
+    expectedMaxScore: 100,
+    expectedMinScore: 98
+  },
+
+  // 16. [ADDITIONAL BENCHMARK CASE] Tagline Tampering: Missing Comma & Exclamation
+  {
+    id: 'TC-016',
+    title: '[ADDITIONAL] Altered Slogan with Missing Comma and Exclamation',
+    category: 'tagline_tampering',
+    contentType: 'social_post',
+    content: 'Crafted with love from organic farms to your table. Try our Avocado Crisp Tartine™ today. FreshBite: Real Food Pure Energy!',
+    guidelines: STANDARD_FRESHBITE_GUIDELINES,
+    expectedFindingCount: 1,
+    expectedFindings: [
+      {
+        ruleId: '6738c302a1b2c3d4e5f60302',
+        severity: 'medium',
+        offendingText: 'Real Food Pure Energy!',
+        explanation: 'Tagline must strictly be formatted as "Real Food, Pure Energy." with a comma and period.'
+      }
+    ],
+    expectedMaxScore: 92,
+    expectedMinScore: 82
+  },
+
+  // 17. [ADDITIONAL BENCHMARK CASE] Prohibited Phrases: Banned Corporate Buzzwords
+  {
+    id: 'TC-017',
+    title: '[ADDITIONAL] Banned Buzzwords "Leverage" and "Paradigm Shift"',
+    category: 'prohibited_phrases',
+    contentType: 'website_copy',
+    content: 'Our team is ready to leverage regional farm partnerships and drive a paradigm shift in wholesome fast-casual dining. Savor our Farm-to-Bowl™ meal. Real Food, Pure Energy.',
+    guidelines: STANDARD_FRESHBITE_GUIDELINES,
+    expectedFindingCount: 1,
+    expectedFindings: [
+      {
+        ruleId: '6738c102a1b2c3d4e5f60102',
+        severity: 'high',
+        offendingText: 'leverage regional farm partnerships and drive a paradigm shift',
+        explanation: 'Disallowed corporate buzzwords ("leverage", "paradigm shift") are prohibited in brand messaging.'
+      }
+    ],
+    expectedMaxScore: 85,
+    expectedMinScore: 70
+  },
+
+  // 18. [ADDITIONAL BENCHMARK CASE] Fully Compliant Allergen Disclosure
+  {
+    id: 'TC-018',
+    title: '[ADDITIONAL] Fully Compliant Allergen Disclosure Announcement',
+    category: 'compliant',
+    contentType: 'social_post',
+    content: 'Try our Gluten-Friendly crust (prepared in a facility that also handles wheat). Pair it with crisp greens from certified organic partner Oakridge Organics. Real Food, Pure Energy.',
+    guidelines: STANDARD_FRESHBITE_GUIDELINES,
+    expectedFindingCount: 0,
+    expectedFindings: [],
+    expectedMaxScore: 100,
+    expectedMinScore: 98
   }
 ];
 
