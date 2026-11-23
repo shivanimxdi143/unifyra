@@ -27,10 +27,14 @@ const validateFindings = (findings, availableRuleIds = []) => {
       severity = 'medium';
     }
 
-    // Validate offendingText
-    const offendingText = (f.offendingText || '').toString().trim();
+    // Validate offendingText (or synthesize visual label if visualArea is provided)
+    let offendingText = (f.offendingText || '').toString().trim();
+    const visualArea = (f.visualArea || f.region || '').toString().trim();
+    if (!offendingText && visualArea) {
+      offendingText = `[Visual: ${visualArea}]`;
+    }
     if (!offendingText) {
-      throw new Error(`Finding at index ${idx} is missing required 'offendingText'`);
+      offendingText = visualArea ? `[Visual: ${visualArea}]` : '[Visual Brand Finding]';
     }
 
     // Validate explanation
@@ -56,7 +60,8 @@ const validateFindings = (findings, availableRuleIds = []) => {
       severity,
       offendingText,
       explanation,
-      suggestedCorrection
+      suggestedCorrection,
+      visualArea: visualArea || null
     };
   });
 };

@@ -113,14 +113,39 @@ const formatGuidelinesForPrompt = (guidelines) => {
  * @param {string} params.content - Submitted text
  * @param {string} params.contentType - e.g. 'social_post', 'email'
  * @param {Array} params.guidelines - Array of Guideline documents or rule objects
+ * @param {boolean} params.hasImage - Whether an image creative is attached for visual auditing
  * @returns {string}
  */
-const buildAnalysisPrompt = ({ content, contentType = 'content', guidelines = [] }) => {
+const buildAnalysisPrompt = ({ content, contentType = 'content', guidelines = [], hasImage = false }) => {
   const formattedGuidelines = formatGuidelinesForPrompt(guidelines);
+
+  const visualAuditSection = hasImage
+    ? `
+=== VISUAL BRAND COMPLIANCE AUDITING (IMAGE CREATIVE ATTACHED) ===
+An image marketing creative has been attached to this submission.
+Audit the attached image against the approved Brand Guidelines above, evaluating:
+1. Logo Presence & Placement: Check whether brand logo/mark is present, unobstructed, and positioned cleanly where assessable. (Explicitly note if logo is absent or cannot be assessed due to crop/resolution).
+2. Brand Palette & Color Cohesion: Evaluate whether visual colors harmonize with brand standards or clash with conflicting palettes according to active guidelines. Do not invent or assume unstated hex codes.
+3. Typography & Text Legibility: Evaluate headline hierarchy, contrast against backgrounds, and readability. Note: Evaluate visual style and legibility; do not claim exact typeface font identification.
+4. Layout Consistency & Visual Balance: Evaluate composition balance, margins, and whether visual messaging is clear without clutter.
+5. Visual Messaging Alignment: Evaluate whether the visual creative reflects the brand's approved messaging and positioning.
+
+CRITICAL INSTRUCTIONS FOR VISUAL AUDITING:
+- Only evaluate against the rules actually provided in the Approved Brand Guidelines. Do not invent official hex colors, fonts, or rules not in the database.
+- If a check cannot be assessed from the image, explicitly report that it cannot be assessed rather than inventing a failure.
+- For each visual finding, provide:
+  * "ruleId": The matching Rule ID from the guidelines, or null.
+  * "severity": "low", "medium", "high", or "critical".
+  * "offendingText": A concise label describing the offending visual element (e.g. "[Visual: Header Typography]", "[Visual: Logo Placement]").
+  * "explanation": Clear explanation of the visual brand issue.
+  * "suggestedCorrection": Recommended visual design adjustment.
+  * "visualArea": The specific region of the image where the issue occurs (e.g. "Top-left header", "Bottom-right corner", "Central hero section", "Background overlay").
+`
+    : '';
 
   return `You are Unifyra's AI Brand Governance & Compliance Auditor.
 Your job is to rigorously review submitted content against approved Brand Guidelines and identify every brand guideline violation or risk.
-
+${visualAuditSection}
 === CORE BRAND STANDARDS & GOVERNANCE SPECIFICATIONS ===
 Pay meticulous attention to the following specific brand standards:
 

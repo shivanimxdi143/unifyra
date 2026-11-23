@@ -13,8 +13,32 @@ const submissionSchema = new mongoose.Schema(
     },
     content: {
       type: String,
-      required: [true, 'Submission content is required'],
-      trim: true
+      trim: true,
+      default: ''
+    },
+    image: {
+      hasImage: {
+        type: Boolean,
+        default: false
+      },
+      originalName: {
+        type: String,
+        trim: true,
+        default: ''
+      },
+      mimeType: {
+        type: String,
+        trim: true,
+        default: ''
+      },
+      size: {
+        type: Number,
+        default: 0
+      },
+      uploadedAt: {
+        type: Date,
+        default: null
+      }
     },
     contentType: {
       type: String,

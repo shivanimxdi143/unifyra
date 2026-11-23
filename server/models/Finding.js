@@ -40,6 +40,11 @@ const findingSchema = new mongoose.Schema(
       type: String,
       trim: true,
       default: ''
+    },
+    visualArea: {
+      type: String,
+      trim: true,
+      default: null
     }
   },
   {

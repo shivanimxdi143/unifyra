@@ -6,15 +6,16 @@ const { validateFindings } = require('../ai/analysisSchema');
 const DEFAULT_MODELS = ['gemini-3.1-flash-lite', 'gemini-3.8-flash', 'gemini-3.5-flash'];
 
 /**
- * Perform brand compliance analysis on submitted content using Gemini
+ * Perform brand compliance analysis on submitted content and optional image creative using Gemini
  *
  * @param {Object} params
  * @param {string} params.content - Text content to analyze
  * @param {string} params.contentType - Type of content (e.g., 'social_post')
  * @param {Array} params.guidelines - Applicable Guideline documents from MongoDB
+ * @param {Object|null} params.image - Optional image creative data { buffer, mimeType }
  * @returns {Promise<Array>} List of validated Finding objects
  */
-const analyzeContentWithGemini = async ({ content, contentType = 'social_post', guidelines = [] }) => {
+const analyzeContentWithGemini = async ({ content, contentType = 'social_post', guidelines = [], image = null }) => {
   const apiKey = process.env.GEMINI_API_KEY;
 
   if (!apiKey || !apiKey.trim()) {
@@ -22,7 +23,22 @@ const analyzeContentWithGemini = async ({ content, contentType = 'social_post', 
   }
 
   const ai = new GoogleGenAI({ apiKey: apiKey.trim() });
-  const prompt = buildAnalysisPrompt({ content, contentType, guidelines });
+  const hasImage = Boolean(image && image.buffer && image.mimeType);
+  const prompt = buildAnalysisPrompt({ content: content || '', contentType, guidelines, hasImage });
+
+  // Build multimodal content payload if image is attached
+  let contents = prompt;
+  if (hasImage) {
+    contents = [
+      prompt,
+      {
+        inlineData: {
+          data: image.buffer.toString('base64'),
+          mimeType: image.mimeType
+        }
+      }
+    ];
+  }
 
   // Determine candidate models
   const configuredModel = process.env.GEMINI_MODEL;
@@ -37,7 +53,7 @@ const analyzeContentWithGemini = async ({ content, contentType = 'social_post', 
     try {
       const response = await ai.models.generateContent({
         model: model,
-        contents: prompt,
+        contents: contents,
         config: {
           responseMimeType: 'application/json',
           temperature: 0.1 // Low temperature for deterministic audit findings

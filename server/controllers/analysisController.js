@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const { Submission, Guideline, Finding } = require('../models');
 const { analyzeContentWithGemini } = require('../services/geminiService');
+const mediaStore = require('../services/mediaStore');
 
 /**
  * @route   POST /api/analysis/:submissionId
@@ -39,13 +40,15 @@ const analyzeSubmission = async (req, res, next) => {
       });
     }
 
-    // 4. Perform Gemini AI brand analysis
+    // 4. Perform Gemini AI brand analysis (including visual audit if image is attached)
+    const cachedImage = mediaStore.get(submission._id.toString());
     let validatedFindings = [];
     try {
       validatedFindings = await analyzeContentWithGemini({
         content: submission.content,
         contentType: submission.contentType,
-        guidelines: guidelines
+        guidelines: guidelines,
+        image: cachedImage
       });
     } catch (aiError) {
       return res.status(502).json({
@@ -68,7 +71,8 @@ const analyzeSubmission = async (req, res, next) => {
         severity: f.severity,
         offendingText: f.offendingText,
         explanation: f.explanation,
-        suggestedCorrection: f.suggestedCorrection || ''
+        suggestedCorrection: f.suggestedCorrection || '',
+        visualArea: f.visualArea || null
       }));
 
       savedFindings = await Finding.insertMany(findingsToInsert);

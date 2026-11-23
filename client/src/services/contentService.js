@@ -111,14 +111,25 @@ export async function getSubmissionWithFindings(id) {
 export async function createAndAnalyzeSubmission({
   content,
   contentType = 'social_post',
-  submittedBy = 'Elena Rostova (Social Media Lead)'
+  submittedBy = 'Elena Rostova (Social Media Lead)',
+  imageFile = null
 }) {
   // Step 1: Create submission in backend (status: 'pending')
-  const createdRes = await api.createSubmission({
-    submittedBy,
-    content,
-    contentType
-  });
+  let createdRes;
+  if (imageFile) {
+    const formData = new FormData();
+    formData.append('submittedBy', submittedBy);
+    formData.append('content', content || '');
+    formData.append('contentType', contentType);
+    formData.append('image', imageFile);
+    createdRes = await api.createSubmission(formData);
+  } else {
+    createdRes = await api.createSubmission({
+      submittedBy,
+      content,
+      contentType
+    });
+  }
   const submission = createdRes.data;
 
   // Step 2: Run Gemini brand compliance analysis
@@ -136,9 +147,20 @@ export async function createAndAnalyzeSubmission({
 
 export async function resubmitSubmission(submissionId, {
   content,
-  contentType = 'social_post'
+  contentType = 'social_post',
+  imageFile = null
 }) {
-  const res = await api.resubmitContent(submissionId, { content, contentType });
+  let res;
+  if (imageFile) {
+    const formData = new FormData();
+    formData.append('content', content || '');
+    formData.append('contentType', contentType);
+    formData.append('image', imageFile);
+    res = await api.resubmitContent(submissionId, formData);
+  } else {
+    res = await api.resubmitContent(submissionId, { content, contentType });
+  }
+
   if (res.data?.data?.status === 'analyzed') {
     return res.data.data;
   }
@@ -153,9 +175,20 @@ export async function resubmitSubmission(submissionId, {
 
 export async function resubmitAndReanalyze(submissionId, {
   content,
-  contentType = 'social_post'
+  contentType = 'social_post',
+  imageFile = null
 }) {
-  const resubmitRes = await api.resubmitContent(submissionId, { content, contentType });
+  let resubmitRes;
+  if (imageFile) {
+    const formData = new FormData();
+    formData.append('content', content || '');
+    formData.append('contentType', contentType);
+    formData.append('image', imageFile);
+    resubmitRes = await api.resubmitContent(submissionId, formData);
+  } else {
+    resubmitRes = await api.resubmitContent(submissionId, { content, contentType });
+  }
+
   const analysisRes = await api.analyzeSubmission(submissionId);
   return {
     ...analysisRes.data,

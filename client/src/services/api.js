@@ -76,12 +76,16 @@ export const getSubmissionsByUser = async (userId) => {
 };
 
 export const createSubmission = async (data) => {
-  const response = await api.post('/submissions', data);
+  const isFormData = typeof FormData !== 'undefined' && data instanceof FormData;
+  const config = isFormData ? { headers: { 'Content-Type': undefined } } : {};
+  const response = await api.post('/submissions', data, config);
   return response.data; // { success: true, message, data: {...} }
 };
 
 export const resubmitContent = async (id, data) => {
-  const response = await api.put(`/submissions/${id}/resubmit`, data);
+  const isFormData = typeof FormData !== 'undefined' && data instanceof FormData;
+  const config = isFormData ? { headers: { 'Content-Type': undefined } } : {};
+  const response = await api.put(`/submissions/${id}/resubmit`, data, config);
   return response.data; // { success: true, message, data: {...} }
 };
 

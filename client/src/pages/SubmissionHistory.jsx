@@ -76,6 +76,7 @@ export default function SubmissionHistory() {
       contentType: sub.contentType || 'social_post',
       status: sub.status || 'pending',
       content: sub.content || '',
+      image: sub.image || null,
       campaign: sub.campaign || 'Brand Campaign',
       submitter: {
         name: sub.submittedBy || 'Elena Rostova',
@@ -91,7 +92,8 @@ export default function SubmissionHistory() {
         severity: f.severity || 'medium',
         offendingText: f.offendingText || '',
         explanation: f.explanation || '',
-        suggestion: f.suggestedCorrection || f.suggestion || ''
+        suggestion: f.suggestedCorrection || f.suggestion || '',
+        visualArea: f.visualArea || null
       })),
       submittedAt: sub.createdAt || sub.submittedAt || new Date().toISOString()
     };

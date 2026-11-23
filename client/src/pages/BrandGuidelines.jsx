@@ -91,7 +91,7 @@ export default function BrandGuidelines() {
     };
   }, [loadData]);
 
-  const categories = ['All', 'Tone & Voice', 'Health & Claims', 'Trademarks & Naming', 'Promotional Style'];
+  const categories = ['All', 'Tone & Voice', 'Health & Claims', 'Trademarks & Naming', 'Promotional Style', 'Visual Identity'];
   const severities = ['All', 'critical', 'high', 'medium', 'low'];
 
   const filteredGuidelines = guidelines.filter((g) => {
@@ -444,6 +444,7 @@ export default function BrandGuidelines() {
                 <option value="Health & Claims">Health & Claims</option>
                 <option value="Trademarks & Naming">Trademarks & Naming</option>
                 <option value="Promotional Style">Promotional Style</option>
+                <option value="Visual Identity">Visual Identity</option>
               </select>
             </div>
 

@@ -116,6 +116,17 @@ export const BRAND_GUIDELINES = [
     doExample: 'Earn double Bite Points as a FreshBite Circle member this Friday.',
     dontExample: 'Get free cashback tokens in our VIP club.',
     updatedAt: '2026-07-19'
+  },
+  {
+    id: 'BG-501',
+    category: 'Visual Identity',
+    title: 'Visual Identity & Creative Composition Standards',
+    severity: 'medium',
+    enforcement: 'Recommended',
+    description: 'Marketing creatives and imagery must feature clear brand identity, legible typography hierarchy, balanced layout with adequate margins, and cohesive visual tone aligned with natural vitality.',
+    doExample: 'High-clarity image featuring visible brand logo in corner, clean modern typography, and natural vibrant lighting.',
+    dontExample: 'Cluttered poster with obscured or distorted logo, illegible low-contrast text over busy photography, and harsh neon filters.',
+    updatedAt: '2026-11-20'
   }
 ];
 

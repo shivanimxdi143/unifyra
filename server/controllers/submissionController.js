@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 const { Submission, Finding, Guideline } = require('../models');
 const { analyzeContentWithGemini } = require('../services/geminiService');
+const mediaStore = require('../services/mediaStore');
 
 /**
  * @route   POST /api/submissions
@@ -10,6 +11,7 @@ const { analyzeContentWithGemini } = require('../services/geminiService');
 const createSubmission = async (req, res, next) => {
   try {
     const { submittedBy, content, contentType } = req.body;
+    const hasImage = Boolean(req.file);
 
     // Validate required fields
     if (!submittedBy || !submittedBy.trim()) {
@@ -19,16 +21,16 @@ const createSubmission = async (req, res, next) => {
       });
     }
 
-    if (!content || !content.trim()) {
+    if (!hasImage && (!content || !content.trim())) {
       return res.status(400).json({
         success: false,
-        error: { message: 'Submission content is required' }
+        error: { message: 'Submission content or an attached creative image is required' }
       });
     }
 
     const submissionData = {
       submittedBy: submittedBy.trim(),
-      content: content.trim(),
+      content: (content && content.trim()) ? content.trim() : (hasImage ? '[Attached Marketing Creative]' : ''),
       status: 'pending'
     };
 
@@ -36,7 +38,27 @@ const createSubmission = async (req, res, next) => {
       submissionData.contentType = contentType.trim().toLowerCase();
     }
 
+    if (hasImage) {
+      submissionData.image = {
+        hasImage: true,
+        originalName: req.file.originalname,
+        mimeType: req.file.mimetype,
+        size: req.file.size,
+        uploadedAt: new Date()
+      };
+    }
+
     const submission = await Submission.create(submissionData);
+
+    // Cache image in memory store for demo analysis and preview
+    if (hasImage) {
+      mediaStore.set(submission._id.toString(), {
+        buffer: req.file.buffer,
+        mimeType: req.file.mimetype,
+        originalName: req.file.originalname,
+        size: req.file.size
+      });
+    }
 
     res.status(201).json({
       success: true,
@@ -286,9 +308,28 @@ const resubmitContent = async (req, res, next) => {
     }
 
     // Update content
-    submission.content = content.trim();
+    if (content && content.trim()) {
+      submission.content = content.trim();
+    }
     if (contentType) {
       submission.contentType = contentType.trim().toLowerCase();
+    }
+
+    // Update image if a new creative was uploaded during resubmission
+    if (req.file) {
+      submission.image = {
+        hasImage: true,
+        originalName: req.file.originalname,
+        mimeType: req.file.mimetype,
+        size: req.file.size,
+        uploadedAt: new Date()
+      };
+      mediaStore.set(submission._id.toString(), {
+        buffer: req.file.buffer,
+        mimeType: req.file.mimetype,
+        originalName: req.file.originalname,
+        size: req.file.size
+      });
     }
 
     // Clear old findings to prevent duplicates upon re-analysis (review history in Review collection is retained)
@@ -301,10 +342,12 @@ const resubmitContent = async (req, res, next) => {
 
     if (guidelines && guidelines.length > 0) {
       try {
+        const cachedImage = mediaStore.get(submission._id.toString());
         const validatedFindings = await analyzeContentWithGemini({
           content: submission.content,
           contentType: submission.contentType,
-          guidelines
+          guidelines,
+          image: cachedImage
         });
 
         if (validatedFindings.length > 0) {
@@ -314,7 +357,8 @@ const resubmitContent = async (req, res, next) => {
             severity: f.severity,
             offendingText: f.offendingText,
             explanation: f.explanation,
-            suggestedCorrection: f.suggestedCorrection || ''
+            suggestedCorrection: f.suggestedCorrection || '',
+            visualArea: f.visualArea || null
           }));
           savedFindings = await Finding.insertMany(findingsToInsert);
         }
@@ -367,10 +411,58 @@ const resubmitContent = async (req, res, next) => {
   }
 };
 
+/**
+ * @route   GET /api/submissions/:id/image
+ * @desc    Serve uploaded image creative preview from temporary demo store
+ * @access  Public
+ */
+const getSubmissionImage = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        error: { message: `Invalid submission ID format: '${id}'` }
+      });
+    }
+
+    const cached = mediaStore.get(id);
+    if (cached && cached.buffer) {
+      res.set('Content-Type', cached.mimeType || 'image/jpeg');
+      res.set('Cache-Control', 'public, max-age=3600');
+      return res.send(cached.buffer);
+    }
+
+    // Check if MongoDB is connected before querying
+    if (mongoose.connection.readyState === 1) {
+      const submission = await Submission.findById(id);
+      if (!submission || !submission.image || !submission.image.hasImage) {
+        return res.status(404).json({
+          success: false,
+          error: { message: `No image creative found for submission ID '${id}'` }
+        });
+      }
+    }
+
+    // Metadata exists but buffer expired from memory store
+    return res.status(404).json({
+      success: false,
+      error: {
+        message: 'Image preview is no longer in temporary memory cache. Persistent cloud storage (e.g., S3) is required for long-term archiving.',
+        code: 'IMAGE_CACHE_EXPIRED'
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   createSubmission,
   getSubmissions,
   getSubmissionById,
   getSubmissionsByUser,
-  resubmitContent
+  resubmitContent,
+  getSubmissionImage
 };

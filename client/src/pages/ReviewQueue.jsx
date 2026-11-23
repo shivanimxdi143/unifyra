@@ -6,7 +6,9 @@ import {
   AlertTriangle,
   Search,
   UserCheck,
-  ShieldAlert
+  ShieldAlert,
+  ImageIcon,
+  ExternalLink
 } from 'lucide-react';
 import PageHeader from '../components/common/PageHeader';
 import Card from '../components/common/Card';
@@ -63,6 +65,7 @@ export default function ReviewQueue() {
       campaign: sub.campaign || 'Brand Campaign',
       status: sub.status || 'pending',
       content: sub.content || '',
+      image: sub.image || null,
       submitter: {
         name: sub.submittedBy || 'Elena Rostova',
         role: 'Content Creator',
@@ -74,7 +77,8 @@ export default function ReviewQueue() {
         severity: f.severity || 'medium',
         offendingText: f.offendingText || '',
         explanation: f.explanation || '',
-        suggestion: f.suggestedCorrection || f.suggestion || ''
+        suggestion: f.suggestedCorrection || f.suggestion || '',
+        visualArea: f.visualArea || null
       })),
       score,
       submittedAt: sub.createdAt || sub.submittedAt || new Date().toISOString()
@@ -292,11 +296,16 @@ export default function ReviewQueue() {
                   }`}
                 >
                   <div className="flex items-center justify-between gap-2 mb-2">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-mono text-[11px] font-bold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded">
                         {sub.id}
                       </span>
                       <span className="text-xs text-slate-600 font-medium">{sub.channel}</span>
+                      {sub.image?.hasImage && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-purple-700 bg-purple-50 border border-purple-200 px-1.5 py-0.5 rounded">
+                          <ImageIcon className="w-2.5 h-2.5" /> Creative
+                        </span>
+                      )}
                     </div>
                     <StatusBadge status={sub.status} size="sm" />
                   </div>
@@ -354,6 +363,59 @@ export default function ReviewQueue() {
               actions={selectedSub.score != null ? <ScoreMeter score={selectedSub.score} /> : null}
             >
               <div className="space-y-5">
+                {/* Attached Creative Asset Preview if present */}
+                {selectedSub.image?.hasImage && (
+                  <div className="p-4 rounded-xl border border-purple-200 bg-purple-50/30 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <ImageIcon className="w-4 h-4 text-purple-700" />
+                        <span className="text-xs font-bold uppercase tracking-wider text-purple-950">
+                          Attached Creative Asset
+                        </span>
+                      </div>
+                      <span className="text-[11px] text-purple-800 font-mono">
+                        {selectedSub.image.originalName || 'creative.png'}
+                        {selectedSub.image.size ? ` (${(selectedSub.image.size / (1024 * 1024)).toFixed(2)} MB)` : ''}
+                      </span>
+                    </div>
+
+                    <div className="relative rounded-lg overflow-hidden border border-purple-200/80 bg-white min-h-[140px] max-h-80 flex items-center justify-center p-2">
+                      <img
+                        src={`/api/submissions/${selectedSub._id}/image`}
+                        alt="Attached marketing creative"
+                        className="max-h-76 w-auto object-contain rounded"
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                          const fb = e.target.parentElement.querySelector('.image-fallback');
+                          if (fb) fb.style.display = 'flex';
+                        }}
+                      />
+                      <div
+                        className="image-fallback hidden p-6 flex-col items-center justify-center text-center text-slate-500 text-xs"
+                      >
+                        <ImageIcon className="w-8 h-8 text-slate-400 mb-2" />
+                        <p className="font-semibold text-slate-700">Image Preview Unavailable in Current Session</p>
+                        <p className="text-[11px] text-slate-400 max-w-xs mt-1">
+                          Image metadata is preserved. Temporary in-memory demo cache clears on server restart.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between text-[11px] text-purple-900 pt-1 border-t border-purple-100">
+                      <span className="font-medium">Audited for visual identity, logo placement, typography, and color harmony</span>
+                      <a
+                        href={`/api/submissions/${selectedSub._id}/image`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1 font-bold text-indigo-700 hover:text-indigo-900"
+                      >
+                        <span>Open Full Image</span>
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    </div>
+                  </div>
+                )}
+
                 {/* Content Box */}
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
@@ -391,11 +453,20 @@ export default function ReviewQueue() {
                           className="p-3 rounded-xl border border-rose-200 bg-rose-50/40 text-xs space-y-1.5"
                         >
                           <div className="flex items-center justify-between">
-                            <span className="font-mono font-bold text-rose-900">{f.ruleId}</span>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="font-mono font-bold text-rose-900">{f.ruleId}</span>
+                              {f.visualArea && (
+                                <span className="text-[10px] font-bold text-purple-700 bg-purple-100 border border-purple-200 px-2 py-0.5 rounded-full flex items-center gap-1">
+                                  <ImageIcon className="w-3 h-3 text-purple-600" />
+                                  <span>Visual: {f.visualArea}</span>
+                                </span>
+                              )}
+                            </div>
                             <StatusBadge status={f.severity} size="sm" />
                           </div>
                           <div className="text-rose-950 font-medium">
-                            Offending text: <code className="bg-rose-100 px-1 py-0.5 rounded text-rose-800">"{f.offendingText}"</code>
+                            {f.visualArea ? 'Visual Element: ' : 'Offending text: '}
+                            <code className="bg-rose-100 px-1 py-0.5 rounded text-rose-800">"{f.offendingText}"</code>
                           </div>
                           <p className="text-slate-600">{f.explanation}</p>
                           {f.suggestion && (
