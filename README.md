@@ -3,11 +3,16 @@
 
 **One Brand. One Voice. Everywhere.**
 
-Unifyra is an AI-powered brand governance platform that helps organizations maintain consistent brand identity across their digital content. It analyzes content against brand guidelines, identifies visual and textual inconsistencies, tracks recurring brand drift, and supports collaborative review workflows.
+Unifyra is an AI-powered brand governance and intelligence platform designed to help organizations maintain consistent brand identity across their digital content. It analyzes content against brand guidelines, identifies visual and textual inconsistencies, tracks recurring brand drift, and enables collaborative review workflows.
 
-**Live Application:** https://unifyra.vercel.app  
-**Backend:** https://unifyra-backend.onrender.com  
-**Repository:** https://github.com/shivanimxdi143/unifyra
+<p align="center">
+  <strong>Live Application:</strong>
+  <a href="https://unifyra.vercel.app">unifyra.vercel.app</a>
+</p>
+
+<p align="center">
+  <strong>Team:</strong> CoreSync
+</p>
 
 ---
 
@@ -21,16 +26,19 @@ Unifyra is an AI-powered brand governance platform that helps organizations main
 - [Project Structure](#project-structure)
 - [Getting Started](#getting-started)
 - [Environment Configuration](#environment-configuration)
-- [Testing](#testing)
+- [Testing and Validation](#testing-and-validation)
 - [Known Limitations](#known-limitations)
 - [Future Roadmap](#future-roadmap)
 - [Team](#team)
+- [Project Links](#project-links)
 
 ---
 
 ## Overview
 
-Maintaining a consistent brand identity across campaigns, documents, images, and communication channels can be challenging. Unifyra addresses this problem through AI-assisted brand auditing and centralized governance.
+Maintaining a consistent brand identity across campaigns, documents, images, and communication channels can be challenging.
+
+Unifyra addresses this problem through AI-assisted brand auditing and centralized governance.
 
 The platform enables teams to:
 
@@ -122,18 +130,22 @@ Added document ingestion and text extraction, integrated extracted text into the
 ## Technology Stack
 
 ### Frontend
-- React
+- React 19
 - Vite
-- Tailwind CSS
-- DaisyUI
-- JavaScript
+- Tailwind CSS v4
+- DaisyUI 5
+- React Router DOM
 - Axios
+- Lucide React
 
 ### Backend
 - Node.js
 - Express.js
-- MongoDB
 - Mongoose
+- MongoDB
+- Multer
+- PDF Parse
+- Mammoth
 
 ### AI
 - Google Gemini API
@@ -152,35 +164,35 @@ Added document ingestion and text extraction, integrated extracted text into the
 Unifyra follows a client-server architecture.
 
 ```text
-                 USER
-                   |
-                   v
-          React Frontend (Vite)
-                   |
-                   | HTTP / REST API
-                   v
-           Express.js Backend
-                   |
-          +--------+---------+
-          |        |         |
-          v        v         v
-       MongoDB   Gemini    File Processing
-       Atlas      API       and Extraction
-          |        |         |
-          +--------+---------+
-                   |
-                   v
-          Analysis & Governance
-                   |
-                   v
-           Frontend Dashboard
+                    USER
+                      |
+                      v
+             React Frontend (Vite)
+                      |
+                      | HTTP / REST API
+                      v
+              Express.js Backend
+                      |
+          +-----------+-----------+
+          |           |           |
+          v           v           v
+       MongoDB      Gemini     File Processing
+       Atlas         API       and Extraction
+          |           |           |
+          +-----------+-----------+
+                      |
+                      v
+             Analysis & Governance
+                      |
+                      v
+              Frontend Dashboard
 ```
 
 ### Architecture Overview
 
 - **Frontend:** Provides the user interface for guidelines, submissions, audits, analytics, collaboration, and notifications.
 - **Backend:** Handles API requests, business logic, document processing, AI integration, and database operations.
-- **MongoDB Atlas:** Stores application data, guidelines, submissions, analytics-related records, comments, and notifications.
+- **MongoDB Atlas:** Stores application data, guidelines, submissions, comments, notifications, and related records.
 - **Gemini API:** Supports content analysis, visual auditing, and actionable guideline suggestions.
 - **Document Processing:** Extracts readable text from supported document formats before analysis.
 
@@ -196,12 +208,17 @@ unifyra/
 |   |-- src/
 |   |-- package.json
 |   |-- vite.config.js
-|   |
 |
 |-- server/
+|   |-- config/
+|   |-- controllers/
+|   |-- models/
+|   |-- routes/
+|   |-- services/
+|   |-- middleware/
 |   |-- package.json
-|   |-- src/
-|   |
+|   |-- server.js
+|   |-- app.js
 |
 |-- AI_EVALUATION_REPORT.md
 |-- README.md
@@ -233,58 +250,121 @@ cd unifyra
 
 ### 2. Set Up the Backend
 
+Open a terminal:
+
 ```bash
 cd server
 
 npm install
 ```
 
-Configure the backend environment variables using the configuration files or variable names referenced by the backend source code.
+Create a `.env` file inside the `server` directory.
 
-Start the backend using the development or start script defined in `server/package.json`.
+Configure the required environment variables as described in the [Environment Configuration](#environment-configuration) section.
+
+Start the backend in development mode:
+
+```bash
+npm run dev
+```
+
+Alternatively, start it using:
+
+```bash
+npm start
+```
+
+The backend uses port `5000` by default if no `PORT` environment variable is supplied.
+
+The health-check endpoint is:
+
+```text
+http://localhost:5000/api/health
+```
 
 ### 3. Set Up the Frontend
 
-Open another terminal:
+Open a second terminal from the project root:
 
 ```bash
-cd unifyra/client
+cd client
 
 npm install
 ```
 
-Configure the frontend API URL according to the environment configuration used by the client.
+Configure the frontend API base URL to point to your running backend.
 
-Start the Vite development server using the script defined in `client/package.json`.
+Start the Vite development server:
 
-### 4. Open the Application
+```bash
+npm run dev
+```
 
-Open the local frontend URL displayed by Vite in your browser.
+Open the local URL displayed in your terminal.
 
-**Important:** Use the actual scripts listed in each directory's `package.json`. The backend and frontend must both be running for the complete application to work.
+### 4. Build the Frontend
+
+To create a production build:
+
+```bash
+npm run build
+```
+
+To preview the production build:
+
+```bash
+npm run preview
+```
+
+### 5. Run Both Services
+
+Keep the backend and frontend terminals running simultaneously while using the application.
+
+**Important:** Both services require their respective environment configurations. Database-backed and AI-powered features require valid service credentials.
 
 ---
 
 ## Environment Configuration
 
-Unifyra requires environment configuration for its backend services and frontend API connection.
+Unifyra requires environment variables for database connectivity, AI services, and frontend-backend communication.
 
-Configure the following services:
+### Backend Environment
 
-| Configuration | Purpose |
+Create a `.env` file inside the `server` directory.
+
+| Variable | Purpose |
 |---|---|
-| MongoDB connection | Connects the backend to the application database |
-| Gemini API key | Enables AI-powered analysis and suggestions |
-| Backend port | Configures the backend server |
-| Frontend API URL | Connects the frontend to the backend |
+| `MONGODB_URI` | MongoDB connection string |
+| `PORT` | Backend server port; defaults to `5000` |
+| `NODE_ENV` | Runtime environment |
 
-Use the environment variable names expected by the source code and deployment configuration.
+Configure the Gemini API key using the exact variable name referenced in the backend AI service configuration.
 
-Create local environment files as required. Never commit real API keys, database credentials, or other secrets to GitHub.
+### Frontend Environment
+
+Configure the frontend API base URL using the environment variable expected by the frontend source code.
+
+For local development, it should point to:
+
+```text
+http://localhost:5000
+```
+
+For production, the frontend connects to the deployed backend.
+
+### Security Guidelines
+
+- Never commit `.env` files or API keys to GitHub.
+- Use your own MongoDB connection credentials.
+- Generate your own Gemini API key.
+- Configure production environment variables separately in Render and Vercel.
+- Do not expose private credentials in frontend code.
+
+**Note:** Refer to the source code for the exact Gemini and frontend API environment variable names.
 
 ---
 
-## Testing
+## Testing and Validation
 
 The following automated test results were recorded during Round 3 development:
 
@@ -294,7 +374,9 @@ The following automated test results were recorded during Round 3 development:
 | Visual Brand Audit | 27/27 passed |
 | Collaboration & Notifications | 17/17 passed |
 
-Additional validation included:
+### Additional Validation
+
+The following application workflows were also tested:
 
 - Frontend production build verification.
 - Image upload workflow testing.
@@ -308,11 +390,30 @@ Additional validation included:
 
 Production deployments were verified on Vercel and Render.
 
+### Available Development Commands
+
+**Frontend:**
+
+| Command | Description |
+|---|---|
+| `npm run dev` | Starts the Vite development server |
+| `npm run build` | Creates a production build |
+| `npm run preview` | Previews the production build |
+| `npm run lint` | Runs Oxlint |
+| `npm run test:routes` | Runs the route test script |
+
+**Backend:**
+
+| Command | Description |
+|---|---|
+| `npm run dev` | Starts the backend with Nodemon |
+| `npm start` | Starts the backend with Node.js |
+
 ---
 
 ## Known Limitations
 
-- Gemini API availability can occasionally be affected by temporary high demand, which may cause analysis requests to time out or fail. The application includes the implemented AI analysis workflows, but successful responses depend on provider availability.
+- Gemini API availability can occasionally be affected by temporary high demand, which may cause analysis requests to time out or fail. The AI analysis workflows are implemented, but successful responses depend on provider availability.
 - Document extraction currently supports PDF, DOCX, and TXT. Legacy DOC files are not supported.
 - Scanned image-only PDFs may not produce readable text because OCR is not currently implemented.
 - Uploaded document buffers are held in temporary in-memory storage. They may expire after a server restart or cache eviction.
@@ -364,7 +465,8 @@ Production deployments were verified on Vercel and Render.
 ## Project Links
 
 - **Live Application:** https://unifyra.vercel.app
-- **Backend:** https://unifyra-backend.onrender.com
+- **Backend API:** https://unifyra-backend.onrender.com
+- **Health Check:** https://unifyra-backend.onrender.com/api/health
 - **GitHub Repository:** https://github.com/shivanimxdi143/unifyra
 
 ---
