@@ -9,7 +9,8 @@ import {
   Sparkles,
   CheckCircle2,
   AlertTriangle,
-  Wand2
+  Wand2,
+  FileText
 } from 'lucide-react';
 import PageHeader from '../components/common/PageHeader';
 import StatusBadge from '../components/common/StatusBadge';
@@ -77,6 +78,7 @@ export default function SubmissionHistory() {
       status: sub.status || 'pending',
       content: sub.content || '',
       image: sub.image || null,
+      document: sub.document || null,
       campaign: sub.campaign || 'Brand Campaign',
       submitter: {
         name: sub.submittedBy || 'Elena Rostova',
@@ -446,6 +448,12 @@ export default function SubmissionHistory() {
                         <span className="font-mono text-[10px] font-bold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded">
                           {sub.id}
                         </span>
+                        {sub.document?.hasDocument && (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-1.5 py-0.5 rounded shrink-0">
+                            <FileText className="w-2.5 h-2.5" />
+                            <span>{sub.document.fileFormat ? sub.document.fileFormat.toUpperCase() : 'DOC'}</span>
+                          </span>
+                        )}
                         <span
                           onClick={() => handleInspect(sub)}
                           className="font-bold text-slate-900 hover:text-indigo-600 cursor-pointer"
@@ -569,6 +577,47 @@ export default function SubmissionHistory() {
                 <span className="text-xs text-slate-400 font-mono font-medium">Pending Audit</span>
               )}
             </div>
+
+            {/* Attached Document Details if present */}
+            {selectedSubmission.document?.hasDocument && (
+              <div className="p-3.5 rounded-xl bg-indigo-50/60 border border-indigo-200 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <FileText className="w-4 h-4 text-indigo-600 shrink-0" />
+                    <span className="text-xs font-bold text-indigo-950 truncate">
+                      {selectedSubmission.document.originalName || 'Document'}
+                    </span>
+                  </div>
+                  <a
+                    href={`/api/submissions/${selectedSubmission._id}/document`}
+                    target="_blank"
+                    rel="noreferrer"
+                    download={selectedSubmission.document.originalName || 'document.pdf'}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-[11px] transition-colors shadow-2xs cursor-pointer shrink-0"
+                  >
+                    <Download className="w-3 h-3" />
+                    <span>Download Document</span>
+                  </a>
+                </div>
+                <div className="flex items-center gap-3 text-[11px] text-indigo-900 font-mono flex-wrap">
+                  <span>Format: <strong>{selectedSubmission.document.fileFormat?.toUpperCase() || 'PDF'}</strong></span>
+                  <span>•</span>
+                  <span>Size: <strong>{((selectedSubmission.document.size || 0) / (1024 * 1024)).toFixed(2)} MB</strong></span>
+                  {selectedSubmission.document.wordCount > 0 && (
+                    <>
+                      <span>•</span>
+                      <span>Words: <strong>{selectedSubmission.document.wordCount}</strong></span>
+                    </>
+                  )}
+                  {selectedSubmission.document.pageCount > 0 && (
+                    <>
+                      <span>•</span>
+                      <span>Pages: <strong>{selectedSubmission.document.pageCount}</strong></span>
+                    </>
+                  )}
+                </div>
+              </div>
+            )}
 
             <div>
               <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">

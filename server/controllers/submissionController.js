@@ -1,19 +1,21 @@
 const mongoose = require('mongoose');
 const { Submission, Finding, Guideline } = require('../models');
 const { analyzeContentWithGemini } = require('../services/geminiService');
+const { extractDocumentText } = require('../services/documentExtractor');
 const mediaStore = require('../services/mediaStore');
 
 /**
  * @route   POST /api/submissions
- * @desc    Submit content for brand governance checking
+ * @desc    Submit content for brand governance checking (supports copy, images, and PDF/DOCX documents)
  * @access  Public
  */
 const createSubmission = async (req, res, next) => {
   try {
     const { submittedBy, content, contentType } = req.body;
     const hasImage = Boolean(req.file);
+    const hasDocument = Boolean(req.documentFile);
 
-    // Validate required fields
+    // Validate required submitter identifier
     if (!submittedBy || !submittedBy.trim()) {
       return res.status(400).json({
         success: false,
@@ -21,21 +23,64 @@ const createSubmission = async (req, res, next) => {
       });
     }
 
-    if (!hasImage && (!content || !content.trim())) {
+    let extractedText = '';
+    let docMetadata = null;
+
+    // Handle document upload and text extraction if document file is attached
+    if (hasDocument) {
+      const extractResult = await extractDocumentText({
+        buffer: req.documentFile.buffer,
+        originalName: req.documentFile.originalname,
+        mimeType: req.documentFile.mimetype
+      });
+
+      if (!extractResult.success) {
+        return res.status(400).json({
+          success: false,
+          error: {
+            message: extractResult.error,
+            code: extractResult.code || 'DOCUMENT_EXTRACTION_FAILED'
+          }
+        });
+      }
+
+      extractedText = extractResult.text || '';
+      docMetadata = {
+        hasDocument: true,
+        originalName: req.documentFile.originalname,
+        mimeType: req.documentFile.mimetype,
+        size: req.documentFile.size,
+        fileFormat: extractResult.format,
+        wordCount: extractResult.wordCount,
+        characterCount: extractResult.characterCount,
+        pageCount: extractResult.pageCount,
+        uploadedAt: new Date()
+      };
+    }
+
+    // Determine final content: explicit content overrides extracted text; otherwise use extracted text or placeholder
+    const finalContent = (content && content.trim())
+      ? content.trim()
+      : (extractedText ? extractedText : (hasImage ? '[Attached Marketing Creative]' : ''));
+
+    // Validate that at least one form of content is provided
+    if (!hasImage && !hasDocument && !finalContent) {
       return res.status(400).json({
         success: false,
-        error: { message: 'Submission content or an attached creative image is required' }
+        error: { message: 'Submission content, an attached document, or an image creative is required' }
       });
     }
 
     const submissionData = {
       submittedBy: submittedBy.trim(),
-      content: (content && content.trim()) ? content.trim() : (hasImage ? '[Attached Marketing Creative]' : ''),
+      content: finalContent,
       status: 'pending'
     };
 
     if (contentType) {
       submissionData.contentType = contentType.trim().toLowerCase();
+    } else if (hasDocument) {
+      submissionData.contentType = 'document';
     }
 
     if (hasImage) {
@@ -48,7 +93,18 @@ const createSubmission = async (req, res, next) => {
       };
     }
 
-    const submission = await Submission.create(submissionData);
+    if (hasDocument && docMetadata) {
+      submissionData.document = docMetadata;
+    }
+
+    let submission;
+    if (mongoose.connection.readyState === 1) {
+      submission = await Submission.create(submissionData);
+    } else {
+      // Offline / testing fallback: instantiate validated model when MongoDB is not connected
+      submission = new Submission(submissionData);
+      submission._id = new mongoose.Types.ObjectId();
+    }
 
     // Cache image in memory store for demo analysis and preview
     if (hasImage) {
@@ -57,6 +113,17 @@ const createSubmission = async (req, res, next) => {
         mimeType: req.file.mimetype,
         originalName: req.file.originalname,
         size: req.file.size
+      });
+    }
+
+    // Cache document in memory store for demo preview and download
+    if (hasDocument) {
+      mediaStore.setDocument(submission._id.toString(), {
+        buffer: req.documentFile.buffer,
+        mimeType: req.documentFile.mimetype,
+        originalName: req.documentFile.originalname,
+        fileFormat: docMetadata.fileFormat,
+        size: req.documentFile.size
       });
     }
 
@@ -284,18 +351,13 @@ const resubmitContent = async (req, res, next) => {
   try {
     const { id } = req.params;
     const { content, contentType } = req.body;
+    const hasImage = Boolean(req.file);
+    const hasDocument = Boolean(req.documentFile);
 
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({
         success: false,
         error: { message: `Invalid submission ID format: '${id}'` }
-      });
-    }
-
-    if (!content || !content.trim()) {
-      return res.status(400).json({
-        success: false,
-        error: { message: 'Updated content is required' }
       });
     }
 
@@ -307,16 +369,61 @@ const resubmitContent = async (req, res, next) => {
       });
     }
 
-    // Update content
+    let extractedText = '';
+    if (hasDocument) {
+      const extractResult = await extractDocumentText({
+        buffer: req.documentFile.buffer,
+        originalName: req.documentFile.originalname,
+        mimeType: req.documentFile.mimetype
+      });
+
+      if (!extractResult.success) {
+        return res.status(400).json({
+          success: false,
+          error: {
+            message: extractResult.error,
+            code: extractResult.code || 'DOCUMENT_EXTRACTION_FAILED'
+          }
+        });
+      }
+
+      extractedText = extractResult.text || '';
+      submission.document = {
+        hasDocument: true,
+        originalName: req.documentFile.originalname,
+        mimeType: req.documentFile.mimetype,
+        size: req.documentFile.size,
+        fileFormat: extractResult.format,
+        wordCount: extractResult.wordCount,
+        characterCount: extractResult.characterCount,
+        pageCount: extractResult.pageCount,
+        uploadedAt: new Date()
+      };
+
+      mediaStore.setDocument(submission._id.toString(), {
+        buffer: req.documentFile.buffer,
+        mimeType: req.documentFile.mimetype,
+        originalName: req.documentFile.originalname,
+        fileFormat: extractResult.format,
+        size: req.documentFile.size
+      });
+    }
+
+    // Determine updated text
     if (content && content.trim()) {
       submission.content = content.trim();
+    } else if (extractedText) {
+      submission.content = extractedText;
     }
+
     if (contentType) {
       submission.contentType = contentType.trim().toLowerCase();
+    } else if (hasDocument && !submission.contentType) {
+      submission.contentType = 'document';
     }
 
     // Update image if a new creative was uploaded during resubmission
-    if (req.file) {
+    if (hasImage) {
       submission.image = {
         hasImage: true,
         originalName: req.file.originalname,
@@ -458,11 +565,61 @@ const getSubmissionImage = async (req, res, next) => {
   }
 };
 
+/**
+ * @route   GET /api/submissions/:id/document
+ * @desc    Serve uploaded document (PDF/DOCX) from temporary demo store for download or viewing
+ * @access  Public
+ */
+const getSubmissionDocument = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({
+        success: false,
+        error: { message: `Invalid submission ID format: '${id}'` }
+      });
+    }
+
+    const cached = mediaStore.getDocument(id);
+    if (cached && cached.buffer) {
+      const mime = cached.mimeType || 'application/pdf';
+      res.set('Content-Type', mime);
+      res.set('Content-Disposition', `inline; filename="${encodeURIComponent(cached.originalName || 'document.pdf')}"`);
+      res.set('Cache-Control', 'public, max-age=3600');
+      return res.send(cached.buffer);
+    }
+
+    // Check if MongoDB is connected before querying
+    if (mongoose.connection.readyState === 1) {
+      const submission = await Submission.findById(id);
+      if (!submission || !submission.document || !submission.document.hasDocument) {
+        return res.status(404).json({
+          success: false,
+          error: { message: `No document attachment found for submission ID '${id}'` }
+        });
+      }
+    }
+
+    // Metadata exists in database but buffer expired from memory store
+    return res.status(404).json({
+      success: false,
+      error: {
+        message: 'Document file is no longer in temporary memory cache. Persistent cloud storage (e.g., S3) is required for long-term archiving.',
+        code: 'DOCUMENT_CACHE_EXPIRED'
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   createSubmission,
   getSubmissions,
   getSubmissionById,
   getSubmissionsByUser,
   resubmitContent,
-  getSubmissionImage
+  getSubmissionImage,
+  getSubmissionDocument
 };

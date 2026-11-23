@@ -112,16 +112,18 @@ export async function createAndAnalyzeSubmission({
   content,
   contentType = 'social_post',
   submittedBy = 'Elena Rostova (Social Media Lead)',
-  imageFile = null
+  imageFile = null,
+  documentFile = null
 }) {
   // Step 1: Create submission in backend (status: 'pending')
   let createdRes;
-  if (imageFile) {
+  if (imageFile || documentFile) {
     const formData = new FormData();
     formData.append('submittedBy', submittedBy);
     formData.append('content', content || '');
     formData.append('contentType', contentType);
-    formData.append('image', imageFile);
+    if (imageFile) formData.append('image', imageFile);
+    if (documentFile) formData.append('document', documentFile);
     createdRes = await api.createSubmission(formData);
   } else {
     createdRes = await api.createSubmission({
@@ -148,14 +150,16 @@ export async function createAndAnalyzeSubmission({
 export async function resubmitSubmission(submissionId, {
   content,
   contentType = 'social_post',
-  imageFile = null
+  imageFile = null,
+  documentFile = null
 }) {
   let res;
-  if (imageFile) {
+  if (imageFile || documentFile) {
     const formData = new FormData();
     formData.append('content', content || '');
     formData.append('contentType', contentType);
-    formData.append('image', imageFile);
+    if (imageFile) formData.append('image', imageFile);
+    if (documentFile) formData.append('document', documentFile);
     res = await api.resubmitContent(submissionId, formData);
   } else {
     res = await api.resubmitContent(submissionId, { content, contentType });
@@ -176,14 +180,16 @@ export async function resubmitSubmission(submissionId, {
 export async function resubmitAndReanalyze(submissionId, {
   content,
   contentType = 'social_post',
-  imageFile = null
+  imageFile = null,
+  documentFile = null
 }) {
   let resubmitRes;
-  if (imageFile) {
+  if (imageFile || documentFile) {
     const formData = new FormData();
     formData.append('content', content || '');
     formData.append('contentType', contentType);
-    formData.append('image', imageFile);
+    if (imageFile) formData.append('image', imageFile);
+    if (documentFile) formData.append('document', documentFile);
     resubmitRes = await api.resubmitContent(submissionId, formData);
   } else {
     resubmitRes = await api.resubmitContent(submissionId, { content, contentType });

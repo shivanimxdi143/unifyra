@@ -89,6 +89,9 @@ export const resubmitContent = async (id, data) => {
   return response.data; // { success: true, message, data: {...} }
 };
 
+export const getSubmissionDocumentUrl = (id) => `${API_BASE_URL}/submissions/${id}/document`;
+export const getSubmissionImageUrl = (id) => `${API_BASE_URL}/submissions/${id}/image`;
+
 // ==========================================
 // Gemini Compliance Analysis API
 // ==========================================

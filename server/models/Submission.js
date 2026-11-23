@@ -2,7 +2,8 @@ const mongoose = require('mongoose');
 
 /**
  * Submission Schema
- * Represents content submitted by team members for brand compliance checking
+ * Represents content submitted by team members for brand compliance checking.
+ * Supports manual text copy, marketing creative images, and PDF/DOCX documents.
  */
 const submissionSchema = new mongoose.Schema(
   {
@@ -40,6 +41,47 @@ const submissionSchema = new mongoose.Schema(
         default: null
       }
     },
+    document: {
+      hasDocument: {
+        type: Boolean,
+        default: false
+      },
+      originalName: {
+        type: String,
+        trim: true,
+        default: ''
+      },
+      mimeType: {
+        type: String,
+        trim: true,
+        default: ''
+      },
+      size: {
+        type: Number,
+        default: 0
+      },
+      fileFormat: {
+        type: String,
+        trim: true,
+        default: ''
+      },
+      wordCount: {
+        type: Number,
+        default: 0
+      },
+      characterCount: {
+        type: Number,
+        default: 0
+      },
+      pageCount: {
+        type: Number,
+        default: 0
+      },
+      uploadedAt: {
+        type: Date,
+        default: null
+      }
+    },
     contentType: {
       type: String,
       trim: true,
@@ -52,6 +94,8 @@ const submissionSchema = new mongoose.Schema(
           'ad_copy',
           'website_copy',
           'press_release',
+          'document',
+          'whitepaper',
           'other'
         ],
         message: '{VALUE} is not a supported content type'
@@ -79,9 +123,10 @@ const submissionSchema = new mongoose.Schema(
   }
 );
 
-// Indexes for query performance (filtering by status and submitter)
+// Indexes for query performance (filtering by status, submitter, and document presence)
 submissionSchema.index({ status: 1, createdAt: -1 });
 submissionSchema.index({ submittedBy: 1 });
+submissionSchema.index({ 'document.hasDocument': 1 });
 
 const Submission = mongoose.model('Submission', submissionSchema);
 

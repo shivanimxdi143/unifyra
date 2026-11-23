@@ -8,7 +8,9 @@ import {
   UserCheck,
   ShieldAlert,
   ImageIcon,
-  ExternalLink
+  ExternalLink,
+  FileText,
+  Download
 } from 'lucide-react';
 import PageHeader from '../components/common/PageHeader';
 import Card from '../components/common/Card';
@@ -55,7 +57,6 @@ export default function ReviewQueue() {
         score = Math.max(25, Math.min(100, 100 - penalty));
       }
     }
-
     return {
       _id: sub._id,
       id: sub._id ? `SUB-${sub._id.slice(-4).toUpperCase()}` : (sub.id || 'SUB-000'),
@@ -66,6 +67,7 @@ export default function ReviewQueue() {
       status: sub.status || 'pending',
       content: sub.content || '',
       image: sub.image || null,
+      document: sub.document || null,
       submitter: {
         name: sub.submittedBy || 'Elena Rostova',
         role: 'Content Creator',
@@ -231,17 +233,15 @@ export default function ReviewQueue() {
             <button
               key={tab.id}
               onClick={() => setFilterStatus(tab.id)}
-              className={`px-3 py-1.5 rounded-xl font-semibold transition-all flex items-center gap-1.5 shrink-0 cursor-pointer ${
-                filterStatus === tab.id
+              className={`px-3 py-1.5 rounded-xl font-semibold transition-all flex items-center gap-1.5 shrink-0 cursor-pointer ${filterStatus === tab.id
                   ? 'bg-slate-900 text-white shadow-2xs'
                   : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-              }`}
+                }`}
             >
               <span>{tab.label}</span>
               <span
-                className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${
-                  filterStatus === tab.id ? 'bg-indigo-700 text-white' : 'bg-slate-200 text-slate-700'
-                }`}
+                className={`text-[10px] px-1.5 py-0.2 rounded-full font-bold ${filterStatus === tab.id ? 'bg-indigo-700 text-white' : 'bg-slate-200 text-slate-700'
+                  }`}
               >
                 {tab.count}
               </span>
@@ -289,11 +289,10 @@ export default function ReviewQueue() {
                 <div
                   key={sub.id}
                   onClick={() => handleOpenReview(sub)}
-                  className={`bg-white rounded-2xl border p-4.5 transition-all cursor-pointer shadow-2xs hover:border-slate-300 ${
-                    isSelected
+                  className={`bg-white rounded-2xl border p-4.5 transition-all cursor-pointer shadow-2xs hover:border-slate-300 ${isSelected
                       ? 'border-indigo-600 ring-2 ring-indigo-500/20 shadow-md bg-indigo-50/15'
                       : 'border-slate-200/90'
-                  }`}
+                    }`}
                 >
                   <div className="flex items-center justify-between gap-2 mb-2">
                     <div className="flex items-center gap-2 flex-wrap">
@@ -304,6 +303,11 @@ export default function ReviewQueue() {
                       {sub.image?.hasImage && (
                         <span className="inline-flex items-center gap-1 text-[10px] font-bold text-purple-700 bg-purple-50 border border-purple-200 px-1.5 py-0.5 rounded">
                           <ImageIcon className="w-2.5 h-2.5" /> Creative
+                        </span>
+                      )}
+                      {sub.document?.hasDocument && (
+                        <span className="inline-flex items-center gap-1 text-[10px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 px-1.5 py-0.5 rounded">
+                          <FileText className="w-2.5 h-2.5" /> {sub.document.fileFormat ? sub.document.fileFormat.toUpperCase() : 'DOC'}
                         </span>
                       )}
                     </div>
@@ -412,6 +416,67 @@ export default function ReviewQueue() {
                         <span>Open Full Image</span>
                         <ExternalLink className="w-3 h-3" />
                       </a>
+                    </div>
+                  </div>
+                )}
+
+                {/* Attached Document Asset Preview if present */}
+                {selectedSub.document?.hasDocument && (
+                  <div className="p-4 rounded-xl border border-indigo-200 bg-indigo-50/40 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <FileText className="w-4 h-4 text-indigo-700" />
+                        <span className="text-xs font-bold uppercase tracking-wider text-indigo-950">
+                          Attached Brand Document
+                        </span>
+                      </div>
+                      <span className="text-[11px] text-indigo-800 font-mono">
+                        {selectedSub.document.originalName || 'document.pdf'}
+                        {selectedSub.document.size ? ` (${(selectedSub.document.size / (1024 * 1024)).toFixed(2)} MB)` : ''}
+                      </span>
+                    </div>
+
+                    <div className="bg-white rounded-lg p-3 border border-indigo-100 flex flex-wrap items-center justify-between gap-3 text-xs">
+                      <div className="flex items-center gap-4 flex-wrap text-slate-600">
+                        <div>
+                          <span className="text-[10px] text-slate-400 font-medium block">Format</span>
+                          <span className="font-bold text-slate-800 uppercase font-mono">
+                            {selectedSub.document.fileFormat || 'PDF'}
+                          </span>
+                        </div>
+                        {selectedSub.document.wordCount > 0 && (
+                          <div>
+                            <span className="text-[10px] text-slate-400 font-medium block">Word Count</span>
+                            <span className="font-bold text-slate-800 font-mono">
+                              {selectedSub.document.wordCount} words
+                            </span>
+                          </div>
+                        )}
+                        {selectedSub.document.pageCount > 0 && (
+                          <div>
+                            <span className="text-[10px] text-slate-400 font-medium block">Length</span>
+                            <span className="font-bold text-slate-800 font-mono">
+                              {selectedSub.document.pageCount} {selectedSub.document.pageCount === 1 ? 'page' : 'pages'}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      <a
+                        href={`/api/submissions/${selectedSub._id}/document`}
+                        target="_blank"
+                        rel="noreferrer"
+                        download={selectedSub.document.originalName || 'document.pdf'}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-xs transition-colors shadow-2xs cursor-pointer"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        <span>Download / View Document</span>
+                      </a>
+                    </div>
+
+                    <div className="text-[11px] text-indigo-900 pt-1 border-t border-indigo-100 flex items-center justify-between">
+                      <span className="font-medium">Text extracted automatically and audited against active brand governance rules</span>
+                      <span className="text-slate-400 text-[10px]">Source preserved</span>
                     </div>
                   </div>
                 )}

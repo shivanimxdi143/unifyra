@@ -7,10 +7,12 @@ import {
   ShieldCheck,
   Check,
   ImageIcon,
-  Upload,
   ImagePlus,
   X,
-  AlertCircle
+  AlertCircle,
+  FileText,
+  FileCheck,
+  FileUp
 } from 'lucide-react';
 import PageHeader from '../components/common/PageHeader';
 import Card from '../components/common/Card';
@@ -40,6 +42,10 @@ export default function SubmitContent() {
   const [selectedImage, setSelectedImage] = useState(null);
   const [imagePreviewUrl, setImagePreviewUrl] = useState(null);
   const [imageValidationError, setImageValidationError] = useState(null);
+
+  // Document Ingestion State
+  const [selectedDocument, setSelectedDocument] = useState(null);
+  const [documentValidationError, setDocumentValidationError] = useState(null);
 
   // AI Audit & Submission State
   const [currentSubmission, setCurrentSubmission] = useState(null);
@@ -77,13 +83,52 @@ export default function SubmitContent() {
 
   const contentTypes = [
     { value: 'social_post', label: 'Social Post (Instagram, TikTok, LinkedIn)' },
+    { value: 'document', label: 'Campaign Brief / Document (PDF, DOCX)' },
     { value: 'email', label: 'Email Newsletter' },
     { value: 'ad_copy', label: 'Digital Ad Copy (Meta, Google)' },
     { value: 'blog_post', label: 'Blog Article / Story' },
     { value: 'website_copy', label: 'Website Landing Page Copy' },
     { value: 'press_release', label: 'Corporate Press Release' },
+    { value: 'whitepaper', label: 'Whitepaper / Guideline Documentation' },
     { value: 'other', label: 'In-Store Signage / Creative Poster' }
   ];
+
+  // Document File Handling
+  const handleDocumentSelect = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setDocumentValidationError(null);
+
+    const ext = (file.name.split('.').pop() || '').toLowerCase();
+    if (ext === 'doc') {
+      setDocumentValidationError('Legacy Word format (.doc) is not supported. Please save or export your document as .docx or .pdf before uploading.');
+      return;
+    }
+
+    if (ext !== 'pdf' && ext !== 'docx' && ext !== 'txt') {
+      setDocumentValidationError('Unsupported document format. Only PDF (.pdf) and Word (.docx) documents are supported.');
+      return;
+    }
+
+    const maxSize = 10 * 1024 * 1024; // 10 MB
+    if (file.size > maxSize) {
+      setDocumentValidationError(`Document is too large (${(file.size / (1024 * 1024)).toFixed(1)} MB). Maximum allowed size is 10 MB.`);
+      return;
+    }
+
+    setSelectedDocument(file);
+    if (!title) {
+      setTitle(file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' '));
+    }
+    setContentType('document');
+    showToast(`Document "${file.name}" attached. Text extraction & brand audit ready.`);
+  };
+
+  const handleRemoveDocument = () => {
+    setSelectedDocument(null);
+    setDocumentValidationError(null);
+  };
 
   // Image File Handling
   const handleImageSelect = (e) => {
@@ -148,6 +193,7 @@ export default function SubmitContent() {
     setCampaign(preset.campaign);
     setContent(preset.content);
     handleRemoveImage();
+    handleRemoveDocument();
     setCurrentSubmission(null);
     setAuditResult(null);
     setAuditError(null);
@@ -156,8 +202,8 @@ export default function SubmitContent() {
   };
 
   const handleRunAudit = async () => {
-    if (!content.trim() && !selectedImage) {
-      alert('Please enter marketing copy or attach an image creative to audit.');
+    if (!content.trim() && !selectedImage && !selectedDocument) {
+      alert('Please enter marketing copy or attach a PDF/DOCX document or creative image to audit.');
       return;
     }
 
@@ -178,20 +224,28 @@ export default function SubmitContent() {
           content: content.trim(),
           contentType,
           submittedBy: 'Elena Rostova (Social Media Lead)',
-          imageFile: selectedImage
+          imageFile: selectedImage,
+          documentFile: selectedDocument
         });
         activeSub = result.submission;
         rawFindings = result.findings;
         setCurrentSubmission(activeSub);
+        if (activeSub?.content && !content.trim()) {
+          setContent(activeSub.content);
+        }
       } else {
         // Resubmit and re-analyze existing submission
         const result = await resubmitAndReanalyze(activeSub._id, {
           content: content.trim(),
           contentType,
-          imageFile: selectedImage
+          imageFile: selectedImage,
+          documentFile: selectedDocument
         });
         rawFindings = result.findings || [];
         setCurrentSubmission(prev => ({ ...prev, status: result.status || 'analyzed' }));
+        if (result.submission?.content && !content.trim()) {
+          setContent(result.submission.content);
+        }
       }
 
       // Compute compliance scores from real findings
@@ -227,12 +281,16 @@ export default function SubmitContent() {
         claimsScore,
         trademarkScore,
         hasImage: Boolean(selectedImage),
+        hasDocument: Boolean(selectedDocument || activeSub?.document?.hasDocument),
+        document: activeSub?.document || null,
         summary:
           rawFindings.length === 0
             ? selectedImage
               ? 'Outstanding brand alignment. Both your copy and visual creative adhere to FreshBite brand identity, typography, and legal standards.'
-              : 'Outstanding brand alignment. Content complies with FreshBite tone, legal claims, trademark designations, and promotional standards.'
-            : `${rawFindings.length} brand guideline ${rawFindings.length === 1 ? 'violation' : 'violations'} identified by Gemini AI${selectedImage ? ' (including visual identity auditing)' : ''}. Review recommendations and dispatch to the human review queue.`,
+              : selectedDocument
+                ? 'Outstanding brand alignment. Extracted document copy complies with FreshBite tone, legal claims, trademark designations, and promotional standards.'
+                : 'Outstanding brand alignment. Content complies with FreshBite tone, legal claims, trademark designations, and promotional standards.'
+            : `${rawFindings.length} brand guideline ${rawFindings.length === 1 ? 'violation' : 'violations'} identified by Gemini AI${selectedImage ? ' (including visual identity auditing)' : ''}${selectedDocument ? ' (from extracted document content)' : ''}. Review recommendations and dispatch to the human review queue.`,
         findings: rawFindings.map((f, idx) => ({
           id: f._id || `f-${idx}`,
           ruleId: f.ruleId ? String(f.ruleId).slice(-6) : 'BRAND',
@@ -401,7 +459,7 @@ export default function SubmitContent() {
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <label className="block text-xs font-bold text-slate-800">
-                    Content Body Copy {selectedImage ? '(Optional when image is attached)' : '*'}
+                    Content Body Copy {selectedImage ? '(Optional when image is attached)' : selectedDocument ? '(Extracted from document automatically)' : '*'}
                   </label>
                   <span className="text-[11px] text-slate-400">
                     {content.length} characters • {content.trim().split(/\s+/).filter(Boolean).length} words
@@ -409,11 +467,105 @@ export default function SubmitContent() {
                 </div>
                 <textarea
                   rows={6}
-                  placeholder="Enter or paste promotional text, social captions, newsletters, ad slogans, or in-store signage..."
+                  placeholder={selectedDocument ? "Extracted document text will appear here automatically upon audit, or you can paste text..." : "Enter or paste promotional text, social captions, newsletters, ad slogans, or in-store signage..."}
                   value={content}
                   onChange={(e) => setContent(e.target.value)}
                   className="w-full text-xs p-3.5 rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none font-sans leading-relaxed text-slate-900"
                 />
+              </div>
+
+              {/* Document Ingestion Section (PDF / DOCX) */}
+              <div className="pt-2 border-t border-slate-100">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-1.5">
+                    <FileText className="w-4 h-4 text-indigo-600" />
+                    <label className="text-xs font-bold text-slate-800">
+                      Brand Document / Campaign Brief (Optional PDF / DOCX)
+                    </label>
+                  </div>
+                  <span className="text-[10px] text-slate-400 font-medium">
+                    PDF, DOCX • Max 10 MB
+                  </span>
+                </div>
+
+                {documentValidationError && (
+                  <div className="mb-3 p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-800 flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                    <span>{documentValidationError}</span>
+                  </div>
+                )}
+
+                {!selectedDocument ? (
+                  <label className="border-2 border-dashed border-slate-200 hover:border-indigo-400 bg-slate-50/60 hover:bg-indigo-50/20 rounded-xl p-4 flex flex-col items-center justify-center cursor-pointer transition-all group text-center">
+                    <input
+                      type="file"
+                      accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                      onChange={handleDocumentSelect}
+                      className="hidden"
+                    />
+                    <div className="w-10 h-10 rounded-xl bg-white border border-slate-200 text-slate-600 group-hover:text-indigo-600 group-hover:border-indigo-200 flex items-center justify-center mb-2 shadow-2xs transition-colors">
+                      <FileUp className="w-5 h-5" />
+                    </div>
+                    <p className="text-xs font-bold text-slate-700 group-hover:text-indigo-900">
+                      Click to browse or drop PDF or Word (.docx) document
+                    </p>
+                    <p className="text-[11px] text-slate-400 mt-0.5">
+                      Extracts full document text, calculates metrics, and runs brand compliance audit
+                    </p>
+                  </label>
+                ) : (
+                  <div className="p-3.5 rounded-xl border border-indigo-200 bg-indigo-50/30 space-y-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-12 h-12 rounded-lg bg-indigo-600 text-white flex flex-col items-center justify-center shrink-0 shadow-2xs">
+                          <FileText className="w-6 h-6" />
+                          <span className="text-[9px] font-bold uppercase tracking-wider font-mono">
+                            {selectedDocument.name.split('.').pop() || 'DOC'}
+                          </span>
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold text-slate-900 truncate">
+                            {selectedDocument.name}
+                          </p>
+                          <p className="text-[11px] text-slate-500 mt-0.5">
+                            {formatFileSize(selectedDocument.size)} • Document
+                          </p>
+                          <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-full mt-1">
+                            <FileCheck className="w-3 h-3 text-emerald-600" />
+                            Ready for Text Extraction & Brand Audit
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <label className="px-2.5 py-1.5 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg cursor-pointer transition-colors shadow-2xs">
+                          <input
+                            type="file"
+                            accept=".pdf,.docx,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                            onChange={handleDocumentSelect}
+                            className="hidden"
+                          />
+                          Replace
+                        </label>
+                        <button
+                          type="button"
+                          onClick={handleRemoveDocument}
+                          className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                          title="Remove document"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="p-2.5 rounded-lg bg-indigo-100/60 border border-indigo-200/80 flex items-center gap-2 text-[11px] text-indigo-900 font-medium">
+                      <Sparkles className="w-3.5 h-3.5 text-indigo-700 shrink-0" />
+                      <span>
+                        <strong>Document Ingestion Pipeline:</strong> Server will extract text, calculate word counts, and run Gemini compliance analysis.
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Visual Brand Creative Upload Section */}
@@ -626,6 +778,22 @@ export default function SubmitContent() {
                 <p className="text-xs text-slate-700 leading-relaxed font-medium">
                   {auditResult.summary}
                 </p>
+
+                {auditResult.hasDocument && (
+                  <div className="mt-2.5 p-2.5 rounded-xl bg-indigo-50/70 border border-indigo-200/80 flex flex-wrap items-center justify-between gap-2 text-xs text-indigo-900 font-medium">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <FileText className="w-4 h-4 text-indigo-600 shrink-0" />
+                      <span className="truncate">
+                        <strong>Document Source:</strong> {auditResult.document?.originalName || selectedDocument?.name || 'Attached Document'}
+                      </span>
+                    </div>
+                    {auditResult.document?.wordCount ? (
+                      <span className="text-[10px] font-mono font-bold text-indigo-700 bg-indigo-100/90 px-2 py-0.5 rounded-full shrink-0">
+                        {auditResult.document.wordCount} words • {auditResult.document.pageCount} {auditResult.document.pageCount === 1 ? 'page' : 'pages'}
+                      </span>
+                    ) : null}
+                  </div>
+                )}
               </div>
 
               {/* Findings section */}

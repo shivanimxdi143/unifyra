@@ -6,7 +6,8 @@ const {
   getSubmissionById,
   getSubmissionsByUser,
   resubmitContent,
-  getSubmissionImage
+  getSubmissionImage,
+  getSubmissionDocument
 } = require('../controllers/submissionController');
 const { handleUpload } = require('../middleware/upload');
 
@@ -25,6 +26,11 @@ router
 router
   .route('/:id/image')
   .get(getSubmissionImage);
+
+// GET /api/submissions/:id/document (serves demo document preview/download)
+router
+  .route('/:id/document')
+  .get(getSubmissionDocument);
 
 // GET /api/submissions/:id, PUT /api/submissions/:id (resubmission)
 router
