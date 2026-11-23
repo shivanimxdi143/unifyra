@@ -17,6 +17,7 @@ import StatusBadge from '../components/common/StatusBadge';
 import ScoreMeter from '../components/common/ScoreMeter';
 import Modal from '../components/common/Modal';
 import EmptyState from '../components/common/EmptyState';
+import CommentThread from '../components/common/CommentThread';
 import {
   getStoredSubmissions,
   getSubmissionWithFindings,
@@ -27,7 +28,7 @@ import { getErrorMessage, analyzeSubmission } from '../services/api';
 import { useOutletContext, useNavigate } from 'react-router-dom';
 
 export default function SubmissionHistory() {
-  const { showToast } = useOutletContext();
+  const { showToast, currentRole = 'Employee' } = useOutletContext();
   const navigate = useNavigate();
 
   const [submissions, setSubmissions] = useState([]);
@@ -674,6 +675,13 @@ export default function SubmissionHistory() {
                 </div>
               </div>
             )}
+
+            {/* Collaboration Comments */}
+            <CommentThread
+              submissionId={selectedSubmission._id}
+              currentRole={currentRole}
+              showToast={showToast}
+            />
           </div>
         </Modal>
       )}

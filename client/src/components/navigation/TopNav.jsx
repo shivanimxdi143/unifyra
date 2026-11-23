@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Menu,
   Search,
@@ -8,12 +8,38 @@ import {
   UserCheck,
   CheckCircle2,
   AlertTriangle,
+  XCircle,
+  MessageSquare,
   Leaf,
   ChevronDown,
-  LogOut
+  LogOut,
+  Loader2
 } from 'lucide-react';
 import { BRAND_PROFILE } from '../../services/mockData';
 import { ROLE_CONFIGS } from '../../services/authService';
+import { getNotifications, markNotificationRead, markAllNotificationsRead } from '../../services/api';
+
+function notifIcon(type) {
+  if (type === 'approved') return <CheckCircle2 className="w-4 h-4 text-emerald-500" />;
+  if (type === 'rejected') return <XCircle className="w-4 h-4 text-rose-500" />;
+  if (type === 'changes_requested') return <AlertTriangle className="w-4 h-4 text-orange-500" />;
+  if (type === 'submission_received' || type === 'resubmission_received')
+    return <AlertTriangle className="w-4 h-4 text-amber-500" />;
+  if (type === 'comment_added' || type === 'reply_added')
+    return <MessageSquare className="w-4 h-4 text-indigo-500" />;
+  return <Sparkles className="w-4 h-4 text-indigo-500" />;
+}
+
+function relativeTime(dateStr) {
+  if (!dateStr) return '';
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  return new Date(dateStr).toLocaleDateString();
+}
 
 export default function TopNav({
   onToggleSidebar,
@@ -26,32 +52,9 @@ export default function TopNav({
   const [showRoleMenu, setShowRoleMenu] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
-  const notifications = [
-    {
-      id: 1,
-      title: 'New Content Pending Review',
-      desc: 'Summer Elixir Instagram Launch requires compliance check.',
-      time: '12m ago',
-      unread: true,
-      type: 'warning'
-    },
-    {
-      id: 2,
-      title: 'Guideline BG-201 Enforced',
-      desc: 'AI flagged medical claims on Facebook ad draft.',
-      time: '1h ago',
-      unread: true,
-      type: 'info'
-    },
-    {
-      id: 3,
-      title: 'Review Complete',
-      desc: 'National Press Release approved by Shivani.',
-      time: '3h ago',
-      unread: false,
-      type: 'success'
-    }
-  ];
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [isLoadingNotifs, setIsLoadingNotifs] = useState(false);
 
   const roles = [
     { id: 'manager', label: 'Brand Manager', desc: 'Manage guidelines & monitor compliance' },
@@ -60,6 +63,58 @@ export default function TopNav({
   ];
 
   const persona = ROLE_CONFIGS[currentRole] || ROLE_CONFIGS['Brand Manager'];
+
+  const fetchNotifications = useCallback(async () => {
+    if (!currentRole) return;
+    setIsLoadingNotifs(true);
+    try {
+      const res = await getNotifications({ recipientRole: currentRole, limit: 20 });
+      setNotifications(res.data || []);
+      setUnreadCount(res.unreadCount || 0);
+    } catch {
+      // silent — notifications are non-critical
+    } finally {
+      setIsLoadingNotifs(false);
+    }
+  }, [currentRole]);
+
+  // Fetch on mount and when role changes
+  useEffect(() => {
+    fetchNotifications();
+  }, [fetchNotifications]);
+
+  // Listen for data-updated events (e.g. after submissions/comments)
+  useEffect(() => {
+    const handler = () => fetchNotifications();
+    window.addEventListener('unifyra-data-updated', handler);
+    return () => window.removeEventListener('unifyra-data-updated', handler);
+  }, [fetchNotifications]);
+
+  const handleBellClick = () => {
+    const opening = !showNotifications;
+    setShowNotifications(opening);
+    setShowRoleMenu(false);
+    if (opening) fetchNotifications();
+  };
+
+  const handleMarkRead = async (n) => {
+    if (n.read) return;
+    try {
+      await markNotificationRead(n._id, currentRole);
+      await fetchNotifications();
+    } catch {
+      // silent
+    }
+  };
+
+  const handleMarkAllRead = async () => {
+    try {
+      await markAllNotificationsRead(currentRole);
+      await fetchNotifications();
+    } catch {
+      // silent
+    }
+  };
 
   return (
     <header className="sticky top-0 z-30 h-16 bg-white/95 backdrop-blur-md border-b border-slate-200/90 px-4 sm:px-6 flex items-center justify-between">
@@ -186,38 +241,70 @@ export default function TopNav({
         {/* Notification Center */}
         <div className="relative">
           <button
-            onClick={() => {
-              setShowNotifications(!showNotifications);
-              setShowRoleMenu(false);
-            }}
+            onClick={handleBellClick}
             className="relative p-2 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors cursor-pointer"
             aria-label="View notifications"
           >
             <Bell className="w-5 h-5" />
-            <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-indigo-600 ring-2 ring-white" />
+            {unreadCount > 0 && (
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-indigo-600 ring-2 ring-white" />
+            )}
           </button>
 
           {showNotifications && (
             <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-xl shadow-xl border border-slate-200 py-2 z-50 animate-scale-up">
-              <div className="px-4 py-2 border-b border-slate-100 flex items-center justify-between">
+              <div className="px-4 py-2 border-b border-slate-100 flex items-center justify-between gap-2">
                 <span className="text-xs font-bold text-slate-900">Governance Alerts</span>
-                <span className="text-[11px] font-semibold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-200">
-                  2 unread
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-[11px] font-semibold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-full border border-indigo-200">
+                    {unreadCount} unread
+                  </span>
+                  {unreadCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={handleMarkAllRead}
+                      className="text-[10px] text-slate-500 hover:text-indigo-600 font-medium cursor-pointer transition-colors"
+                    >
+                      Mark all read
+                    </button>
+                  )}
+                </div>
               </div>
+
               <div className="max-h-72 overflow-y-auto divide-y divide-slate-100">
-                {notifications.map((n) => (
-                  <div key={n.id} className="p-3.5 hover:bg-slate-50/80 transition-colors">
+                {isLoadingNotifs && (
+                  <div className="flex items-center justify-center py-6">
+                    <Loader2 className="w-5 h-5 animate-spin text-indigo-500" />
+                  </div>
+                )}
+
+                {!isLoadingNotifs && notifications.length === 0 && (
+                  <div className="p-4 text-center text-xs text-slate-400 italic">
+                    No governance alerts for your role.
+                  </div>
+                )}
+
+                {!isLoadingNotifs && notifications.map((n) => (
+                  <div
+                    key={n._id}
+                    onClick={() => handleMarkRead(n)}
+                    className={`p-3.5 hover:bg-slate-50/80 transition-colors cursor-pointer ${
+                      !n.read ? 'bg-indigo-50/40' : ''
+                    }`}
+                  >
                     <div className="flex items-start gap-2.5">
                       <div className="mt-0.5 shrink-0">
-                        {n.type === 'warning' && <AlertTriangle className="w-4 h-4 text-amber-500" />}
-                        {n.type === 'info' && <Sparkles className="w-4 h-4 text-indigo-500" />}
-                        {n.type === 'success' && <CheckCircle2 className="w-4 h-4 text-emerald-500" />}
+                        {notifIcon(n.type)}
                       </div>
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs font-semibold text-slate-900">{n.title}</p>
-                        <p className="text-[11px] text-slate-600 mt-0.5 leading-snug">{n.desc}</p>
-                        <span className="text-[10px] text-slate-400 mt-1 block">{n.time}</span>
+                        <div className="flex items-start justify-between gap-2">
+                          <p className="text-xs font-semibold text-slate-900">{n.title}</p>
+                          {!n.read && (
+                            <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 shrink-0 mt-1" />
+                          )}
+                        </div>
+                        <p className="text-[11px] text-slate-600 mt-0.5 leading-snug">{n.message}</p>
+                        <span className="text-[10px] text-slate-400 mt-1 block">{relativeTime(n.createdAt)}</span>
                       </div>
                     </div>
                   </div>

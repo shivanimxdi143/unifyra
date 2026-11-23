@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const { Review, Submission, Finding } = require('../models');
+const { emitToRoles } = require('../services/notificationService');
 
 const ALLOWED_DECISIONS = ['approved', 'rejected', 'changes_requested'];
 
@@ -78,6 +79,44 @@ const createReview = async (req, res, next) => {
     // 8. Update submission status to match human decision
     submission.status = normalizedDecision;
     await submission.save();
+
+    // 9. Emit governance notifications (non-critical: errors are swallowed in emitToRoles)
+    const contentPreview = submission.content
+      ? submission.content.slice(0, 40) + (submission.content.length > 40 ? '…' : '')
+      : 'submission';
+
+    if (normalizedDecision === 'approved') {
+      await emitToRoles(['Employee', 'Brand Manager'], {
+        type: 'approved',
+        title: 'Content Approved',
+        message: `${reviewerId.trim()} approved "${contentPreview}"`,
+        submissionId: submission._id,
+        actorId: reviewerId.trim()
+      });
+    } else if (normalizedDecision === 'rejected') {
+      await emitToRoles(['Employee', 'Brand Manager'], {
+        type: 'rejected',
+        title: 'Content Rejected',
+        message: `${reviewerId.trim()} rejected "${contentPreview}". Review the feedback and revise.`,
+        submissionId: submission._id,
+        actorId: reviewerId.trim()
+      });
+    } else if (normalizedDecision === 'changes_requested') {
+      await emitToRoles(['Employee'], {
+        type: 'changes_requested',
+        title: 'Changes Requested',
+        message: `${reviewerId.trim()} requested revisions on "${contentPreview}": ${comments.trim().slice(0, 80)}${comments.trim().length > 80 ? '…' : ''}`,
+        submissionId: submission._id,
+        actorId: reviewerId.trim()
+      });
+      await emitToRoles(['Brand Manager'], {
+        type: 'changes_requested',
+        title: 'Reviewer Requested Changes',
+        message: `${reviewerId.trim()} requested changes on "${contentPreview}"`,
+        submissionId: submission._id,
+        actorId: reviewerId.trim()
+      });
+    }
 
     res.status(201).json({
       success: true,

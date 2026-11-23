@@ -3,6 +3,7 @@ const { Submission, Finding, Guideline } = require('../models');
 const { analyzeContentWithGemini } = require('../services/geminiService');
 const { extractDocumentText } = require('../services/documentExtractor');
 const mediaStore = require('../services/mediaStore');
+const { emitToRoles } = require('../services/notificationService');
 
 /**
  * @route   POST /api/submissions
@@ -126,6 +127,18 @@ const createSubmission = async (req, res, next) => {
         size: req.documentFile.size
       });
     }
+
+    // Notify Reviewer and Brand Manager that a new submission is awaiting review (non-critical)
+    const newSubPreview = finalContent
+      ? finalContent.slice(0, 50) + (finalContent.length > 50 ? '\u2026' : '')
+      : (hasDocument ? 'Attached document' : 'Marketing creative');
+    await emitToRoles(['Reviewer', 'Brand Manager'], {
+      type: 'submission_received',
+      title: 'New Submission Awaiting Review',
+      message: `${submittedBy.trim()} submitted \u201c${newSubPreview}\u201d for brand compliance review`,
+      submissionId: submission._id,
+      actorId: submittedBy.trim()
+    });
 
     res.status(201).json({
       success: true,
@@ -494,6 +507,18 @@ const resubmitContent = async (req, res, next) => {
     }
 
     await submission.save();
+
+    // Notify Reviewer and Brand Manager that a revised submission is awaiting re-review (non-critical)
+    const resubPreview = submission.content
+      ? submission.content.slice(0, 50) + (submission.content.length > 50 ? '\u2026' : '')
+      : 'Revised content';
+    await emitToRoles(['Reviewer', 'Brand Manager'], {
+      type: 'resubmission_received',
+      title: 'Revised Submission Awaiting Review',
+      message: `${submission.submittedBy || 'Submitter'} resubmitted \u201c${resubPreview}\u201d after revisions`,
+      submissionId: submission._id,
+      actorId: submission.submittedBy || ''
+    });
 
     res.status(200).json({
       success: true,

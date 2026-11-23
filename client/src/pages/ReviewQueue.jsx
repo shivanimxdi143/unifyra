@@ -17,6 +17,7 @@ import Card from '../components/common/Card';
 import StatusBadge from '../components/common/StatusBadge';
 import ScoreMeter from '../components/common/ScoreMeter';
 import EmptyState from '../components/common/EmptyState';
+import CommentThread from '../components/common/CommentThread';
 import {
   getStoredSubmissions,
   getSubmissionWithFindings,
@@ -567,6 +568,13 @@ export default function ReviewQueue() {
                     </div>
                   </div>
                 )}
+
+                {/* Collaboration Comments */}
+                <CommentThread
+                  submissionId={selectedSub._id}
+                  currentRole={currentRole}
+                  showToast={showToast}
+                />
 
                 {/* Reviewer Notes & Action Buttons (Reviewer & Brand Manager only) or Read-Only Banner (Employee) */}
                 {canReview ? (

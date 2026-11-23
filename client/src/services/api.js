@@ -146,4 +146,40 @@ export const dismissGuidelineSuggestion = async (id, data = {}) => {
   return response.data; // { success: true, message, data: suggestion }
 };
 
+// ==========================================
+// Collaboration Comments APIs
+// ==========================================
+export const getComments = async (submissionId) => {
+  const response = await api.get(`/comments/${submissionId}`);
+  return response.data; // { success, count, data: [...] }
+};
+
+export const addComment = async (submissionId, data) => {
+  const response = await api.post(`/comments/${submissionId}`, data);
+  return response.data; // { success, data: comment }
+};
+
+export const deleteComment = async (commentId) => {
+  const response = await api.delete(`/comments/comment/${commentId}`);
+  return response.data;
+};
+
+// ==========================================
+// Notifications APIs
+// ==========================================
+export const getNotifications = async (params = {}) => {
+  const response = await api.get('/notifications', { params });
+  return response.data; // { success, count, unreadCount, data: [...] }
+};
+
+export const markNotificationRead = async (id, recipientRole) => {
+  const response = await api.patch(`/notifications/${id}/read`, { recipientRole });
+  return response.data;
+};
+
+export const markAllNotificationsRead = async (recipientRole) => {
+  const response = await api.patch('/notifications/mark-all-read', { recipientRole });
+  return response.data;
+};
+
 export default api;
