@@ -7,7 +7,13 @@ import {
   CheckCircle2,
   XCircle,
   BookOpen,
-  Edit2
+  Edit2,
+  Sparkles,
+  Check,
+  X,
+  TrendingUp,
+  Brain,
+  AlertTriangle
 } from 'lucide-react';
 import PageHeader from '../components/common/PageHeader';
 import StatusBadge from '../components/common/StatusBadge';
@@ -18,7 +24,11 @@ import {
   getStoredGuidelines,
   createNewGuideline,
   updateExistingGuideline,
-  ensureDefaultGuidelines
+  ensureDefaultGuidelines,
+  fetchGuidelineSuggestions,
+  approveSuggestionAndApplyGuideline,
+  dismissSuggestionById,
+  requestAIGuidelineSuggestions
 } from '../services/contentService';
 import { getErrorMessage } from '../services/api';
 import { useOutletContext } from 'react-router-dom';
@@ -26,6 +36,9 @@ import { useOutletContext } from 'react-router-dom';
 export default function BrandGuidelines() {
   const { showToast } = useOutletContext();
   const [guidelines, setGuidelines] = useState([]);
+  const [suggestions, setSuggestions] = useState([]);
+  const [isGeneratingSuggestions, setIsGeneratingSuggestions] = useState(false);
+  const [processingSuggestionId, setProcessingSuggestionId] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState('All');
@@ -50,7 +63,10 @@ export default function BrandGuidelines() {
 
   const loadData = useCallback(async () => {
     try {
-      const data = await getStoredGuidelines();
+      const [data, suggs] = await Promise.all([
+        getStoredGuidelines(),
+        fetchGuidelineSuggestions('pending').catch(() => [])
+      ]);
       setError(null);
       const normalized = (data || []).map((g) => ({
         _id: g._id,
@@ -67,6 +83,7 @@ export default function BrandGuidelines() {
         updatedAt: g.updatedAt ? new Date(g.updatedAt).toISOString().split('T')[0] : '2026-11-17'
       }));
       setGuidelines(normalized);
+      setSuggestions(suggs || []);
     } catch (err) {
       setError(getErrorMessage(err));
     } finally {
@@ -189,6 +206,48 @@ export default function BrandGuidelines() {
     }
   };
 
+  const handleApproveSuggestion = async (suggestion) => {
+    setProcessingSuggestionId(suggestion._id);
+    try {
+      await approveSuggestionAndApplyGuideline(suggestion._id, 'Brand Manager');
+      showToast(`Guideline "${suggestion.title}" approved and active in AI audits!`);
+      window.dispatchEvent(new Event('unifyra-data-updated'));
+      await loadData();
+    } catch (err) {
+      showToast(`Failed to approve suggestion: ${getErrorMessage(err)}`);
+    } finally {
+      setProcessingSuggestionId(null);
+    }
+  };
+
+  const handleDismissSuggestion = async (suggestion) => {
+    setProcessingSuggestionId(suggestion._id);
+    try {
+      await dismissSuggestionById(suggestion._id, 'Brand Manager');
+      showToast(`Suggestion "${suggestion.title}" dismissed.`);
+      window.dispatchEvent(new Event('unifyra-data-updated'));
+      await loadData();
+    } catch (err) {
+      showToast(`Failed to dismiss suggestion: ${getErrorMessage(err)}`);
+    } finally {
+      setProcessingSuggestionId(null);
+    }
+  };
+
+  const handleGenerateSuggestions = async () => {
+    setIsGeneratingSuggestions(true);
+    try {
+      const generated = await requestAIGuidelineSuggestions();
+      showToast(`Generated ${generated.length} new guideline suggestions from brand drift.`);
+      window.dispatchEvent(new Event('unifyra-data-updated'));
+      await loadData();
+    } catch (err) {
+      showToast(`Could not generate suggestions: ${getErrorMessage(err)}`);
+    } finally {
+      setIsGeneratingSuggestions(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -209,6 +268,145 @@ export default function BrandGuidelines() {
           </button>
         }
       />
+
+      {/* Proposed Guideline Improvements (Brand Drift Intelligence) */}
+      <div className="bg-gradient-to-br from-indigo-950 via-slate-900 to-purple-950 rounded-2xl p-5 sm:p-6 text-white shadow-md border border-indigo-500/20">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-indigo-800/40">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-indigo-500/20 border border-indigo-400/30 flex items-center justify-center text-indigo-400 shrink-0">
+              <Sparkles className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="text-base font-bold text-white">Proposed Guideline Improvements</h2>
+                <span className="px-2 py-0.5 rounded-full text-2xs font-bold bg-indigo-500/30 text-indigo-200 border border-indigo-400/30 uppercase tracking-wider">
+                  Brand Drift Intelligence
+                </span>
+                {suggestions.length > 0 && (
+                  <span className="px-2 py-0.5 rounded-full text-2xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30">
+                    {suggestions.length} Pending
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-slate-300 mt-0.5">
+                AI analyzes recurring compliance violations across submissions to propose targeted guideline updates for manager approval.
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={handleGenerateSuggestions}
+            disabled={isGeneratingSuggestions}
+            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl bg-indigo-500/20 hover:bg-indigo-500/30 border border-indigo-400/30 text-xs font-semibold text-indigo-200 transition-all cursor-pointer disabled:opacity-50 shrink-0"
+          >
+            <Brain className="w-4 h-4" />
+            <span>{isGeneratingSuggestions ? 'Analyzing Drift...' : 'Scan Drift Patterns'}</span>
+          </button>
+        </div>
+
+        {/* Suggestion Cards */}
+        {suggestions.length > 0 ? (
+          <div className="mt-5 grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {suggestions.map((sug) => {
+              const isProcessing = processingSuggestionId === sug._id;
+              const evidence = sug.supportingEvidence || {};
+              return (
+                <div
+                  key={sug._id}
+                  className="bg-slate-900/90 rounded-xl border border-indigo-500/30 p-5 flex flex-col justify-between space-y-4 hover:border-indigo-400/50 transition-all shadow-sm"
+                >
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="px-2 py-0.5 rounded-md text-2xs font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-400/30">
+                          {sug.category}
+                        </span>
+                        <span className={`px-2 py-0.5 rounded-md text-2xs font-bold uppercase ${
+                          sug.severity === 'critical' ? 'bg-red-500/20 text-red-300 border border-red-500/30' :
+                          sug.severity === 'high' ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30' :
+                          'bg-blue-500/20 text-blue-300 border border-blue-500/30'
+                        }`}>
+                          {sug.severity}
+                        </span>
+                        {sug.confidence && (
+                          <span className="text-2xs font-semibold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                            {Math.round(sug.confidence * 100)}% Confidence
+                          </span>
+                        )}
+                      </div>
+                      {evidence.violationCount && (
+                        <span className="text-2xs text-amber-300 font-semibold bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
+                          Violated {evidence.violationCount}x
+                        </span>
+                      )}
+                    </div>
+
+                    <div>
+                      <h3 className="text-sm font-bold text-white tracking-tight">{sug.title}</h3>
+                      <p className="mt-1.5 text-xs text-slate-300 leading-relaxed bg-slate-800/60 p-3 rounded-lg border border-slate-700/50">
+                        <strong className="text-indigo-300">Proposed Rule:</strong> {sug.proposedRuleText}
+                      </p>
+                    </div>
+
+                    {sug.rationale && (
+                      <p className="text-2xs text-slate-400 leading-relaxed">
+                        <strong className="text-slate-300">Rationale:</strong> {sug.rationale}
+                      </p>
+                    )}
+
+                    {evidence.sampleOffendingText && (
+                      <div className="text-2xs text-slate-300 bg-rose-950/40 border border-rose-500/30 p-2.5 rounded-lg">
+                        <span className="font-semibold text-rose-300">Sample Drift Pattern: </span>
+                        <span className="italic">"{evidence.sampleOffendingText}"</span>
+                      </div>
+                    )}
+
+                    {(sug.suggestedDoExample || sug.suggestedDontExample) && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-2xs">
+                        {sug.suggestedDoExample && (
+                          <div className="p-2 rounded bg-emerald-950/40 border border-emerald-500/30 text-emerald-200">
+                            <strong>Do:</strong> {sug.suggestedDoExample}
+                          </div>
+                        )}
+                        {sug.suggestedDontExample && (
+                          <div className="p-2 rounded bg-rose-950/40 border border-rose-500/30 text-rose-200">
+                            <strong>Don't:</strong> {sug.suggestedDontExample}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="pt-3 border-t border-slate-800 flex items-center justify-end gap-2">
+                    <button
+                      onClick={() => handleDismissSuggestion(sug)}
+                      disabled={isProcessing}
+                      className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition-all cursor-pointer disabled:opacity-50 inline-flex items-center gap-1.5"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                      <span>Dismiss</span>
+                    </button>
+                    <button
+                      onClick={() => handleApproveSuggestion(sug)}
+                      disabled={isProcessing}
+                      className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold transition-all shadow-sm cursor-pointer disabled:opacity-50 inline-flex items-center gap-1.5"
+                    >
+                      <Check className="w-3.5 h-3.5" />
+                      <span>{isProcessing ? 'Applying...' : 'Approve & Enforce'}</span>
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="mt-4 p-4 rounded-xl bg-slate-900/60 border border-slate-800 text-center">
+            <p className="text-xs text-slate-400">
+              No pending guideline suggestions. Click <strong className="text-indigo-300">Scan Drift Patterns</strong> above or check back after new submissions are audited.
+            </p>
+          </div>
+        )}
+      </div>
 
       {/* Filter & Search Bar */}
       <div className="bg-white rounded-2xl border border-slate-200/90 p-4 shadow-2xs space-y-4">

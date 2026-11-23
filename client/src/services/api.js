@@ -112,7 +112,35 @@ export const createReview = async (submissionId, data) => {
 
 export const getReviewHistory = async (submissionId) => {
   const response = await api.get(`/reviews/${submissionId}`);
-  return response.data; // { success: true, submissionId, currentStatus, count, data: [...] }
+  return response.data; // { success: true, count, data: [...] }
+};
+
+// ==========================================
+// Brand Drift Intelligence & Suggestions APIs
+// ==========================================
+export const getDriftAnalytics = async (params = {}) => {
+  const response = await api.get('/analytics/drift', { params });
+  return response.data; // { success: true, data: { summary, topRecurringViolations, categoryBreakdown, channelBreakdown, timelineTrends, ... } }
+};
+
+export const getGuidelineSuggestions = async (params = {}) => {
+  const response = await api.get('/analytics/suggestions', { params });
+  return response.data; // { success: true, count, data: [...] }
+};
+
+export const generateGuidelineSuggestions = async () => {
+  const response = await api.post('/analytics/suggest-guideline-refinements');
+  return response.data; // { success: true, message, data: [...] }
+};
+
+export const approveGuidelineSuggestion = async (id, data = {}) => {
+  const response = await api.post(`/analytics/suggestions/${id}/approve`, data);
+  return response.data; // { success: true, message, data: { suggestion, guideline } }
+};
+
+export const dismissGuidelineSuggestion = async (id, data = {}) => {
+  const response = await api.post(`/analytics/suggestions/${id}/dismiss`, data);
+  return response.data; // { success: true, message, data: suggestion }
 };
 
 export default api;

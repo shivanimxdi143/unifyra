@@ -52,6 +52,37 @@ const analysisRateLimiter = (req, res, next) => {
   next();
 };
 
+/**
+ * Rate limiting middleware for AI drift refinement suggestions (max 10 requests per minute)
+ */
+const driftSuggestionLimiter = (req, res, next) => {
+  const clientIp = req.headers['x-forwarded-for']?.split(',')[0].trim() || req.socket.remoteAddress || 'unknown';
+  const key = `drift_${clientIp}`;
+  const now = Date.now();
+
+  const record = requestCounts.get(key);
+
+  if (!record || now - record.startTime > WINDOW_MS) {
+    requestCounts.set(key, { count: 1, startTime: now });
+    return next();
+  }
+
+  if (record.count >= 10) {
+    const retryAfterSeconds = Math.ceil((record.startTime + WINDOW_MS - now) / 1000);
+    res.set('Retry-After', String(retryAfterSeconds));
+    return res.status(429).json({
+      success: false,
+      error: {
+        message: `Too many guideline suggestion requests. Please wait ${retryAfterSeconds} seconds before requesting new AI suggestions.`
+      }
+    });
+  }
+
+  record.count += 1;
+  next();
+};
+
 module.exports = {
-  analysisRateLimiter
+  analysisRateLimiter,
+  driftSuggestionLimiter
 };

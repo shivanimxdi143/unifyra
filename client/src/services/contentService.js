@@ -238,3 +238,56 @@ export async function fetchReviewAuditTrail(submissionId) {
 export async function resetApplicationData() {
   return await ensureDefaultGuidelines();
 }
+
+/**
+ * Brand Drift Intelligence & Suggestions Helpers
+ */
+export async function fetchDriftAnalytics(timeRange = '30d') {
+  try {
+    const res = await api.getDriftAnalytics({ timeRange });
+    return res.data || null;
+  } catch (err) {
+    console.error('Failed to fetch brand drift analytics:', err);
+    throw err;
+  }
+}
+
+export async function fetchGuidelineSuggestions(status) {
+  try {
+    const res = await api.getGuidelineSuggestions(status ? { status } : {});
+    return res.data || [];
+  } catch (err) {
+    console.error('Failed to fetch guideline suggestions:', err);
+    throw err;
+  }
+}
+
+export async function requestAIGuidelineSuggestions() {
+  try {
+    const res = await api.generateGuidelineSuggestions();
+    return res.data || [];
+  } catch (err) {
+    console.error('Failed to generate guideline suggestions:', err);
+    throw err;
+  }
+}
+
+export async function approveSuggestionAndApplyGuideline(id, reviewerName = 'Brand Manager') {
+  try {
+    const res = await api.approveGuidelineSuggestion(id, { reviewerName });
+    return res.data;
+  } catch (err) {
+    console.error('Failed to approve guideline suggestion:', err);
+    throw err;
+  }
+}
+
+export async function dismissSuggestionById(id, reviewerName = 'Brand Manager') {
+  try {
+    const res = await api.dismissGuidelineSuggestion(id, { reviewerName });
+    return res.data;
+  } catch (err) {
+    console.error('Failed to dismiss guideline suggestion:', err);
+    throw err;
+  }
+}

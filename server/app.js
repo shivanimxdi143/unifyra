@@ -8,6 +8,7 @@ const guidelineRoutes = require('./routes/guidelineRoutes');
 const submissionRoutes = require('./routes/submissionRoutes');
 const analysisRoutes = require('./routes/analysisRoutes');
 const reviewRoutes = require('./routes/reviewRoutes');
+const analyticsRoutes = require('./routes/analyticsRoutes');
 const { notFoundHandler, errorHandler } = require('./middleware/errorHandler');
 
 const app = express();
@@ -67,6 +68,7 @@ app.use('/api/guidelines', guidelineRoutes);
 app.use('/api/submissions', submissionRoutes);
 app.use('/api/analysis', analysisRoutes);
 app.use('/api/reviews', reviewRoutes);
+app.use('/api/analytics', analyticsRoutes);
 
 // 404 Not Found handler
 app.use(notFoundHandler);
